@@ -77,14 +77,6 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 
 
-### update_remote_config_defaults
-
-```sh
-[bundle exec] fastlane update_remote_config_defaults
-```
-
-
-
 ### nicegram_match
 
 ```sh

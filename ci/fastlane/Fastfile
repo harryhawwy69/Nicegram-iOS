@@ -2,7 +2,6 @@ default_platform :ios
 
 require 'base64'
 require 'fileutils'
-require 'googleauth'
 require 'json'
 require 'spaceship'
 
@@ -15,7 +14,6 @@ BAZEL_REMOTE_CACHE = ENV["BAZEL_REMOTE_CACHE"]
 BAZEL_USER_ROOT = ENV["BAZEL_USER_ROOT"]
 BUILD_WORKING_DIR = ENV["BUILD_WORKING_DIR"]
 BUNDLE_ID = ENV["BUNDLE_ID"]
-GOOGLE_APPLICATION_CREDENTIALS_BASE64 = ENV["GOOGLE_APPLICATION_CREDENTIALS_BASE64"] 
 KEYCHAIN_NAME = ENV["KEYCHAIN_NAME"]
 KEYCHAIN_PASSWORD = ENV["KEYCHAIN_PASSWORD"]
 SIGN_URL = ENV["SIGN_URL"]
@@ -105,8 +103,6 @@ lane :build do |options|
   telegram_configuration_path = resolve_telegram_configuration(
     is_appstore_build: upload_to_tf
   )
-
-  update_remote_config_defaults()
 
   ensure_xcode_symlink()
 
@@ -236,32 +232,6 @@ lane :upload_ipa do |options|
     ipa: ipa_path,
     skip_waiting_for_build_processing: true,
   )
-end
-
-lane :update_remote_config_defaults do |options|
-  credentials_file_path = "./GOOGLE_APPLICATION_CREDENTIALS"
-  File.write(
-    credentials_file_path, 
-    Base64.decode64(GOOGLE_APPLICATION_CREDENTIALS_BASE64)
-  )
-
-  scope = [
-    "https://www.googleapis.com/auth/firebase.remoteconfig"
-  ]
-
-  auth = Google::Auth::ServiceAccountCredentials.make_creds(
-    json_key_io: File.open(credentials_file_path),
-    scope: scope
-  )
-  token = auth.fetch_access_token!["access_token"]
-  
-  sh "curl https://firebaseremoteconfig.googleapis.com/v1/projects/nicegram-55d94/remoteConfig:downloadDefaults?format=PLIST \
-  --compressed \
-  -H \"Authorization: Bearer #{token}\" \
-  -o #{SOURCE_PATH}/Telegram/Telegram-iOS/FirebaseRemoteConfigDefaults.plist \
-  "
-
-  File.delete(credentials_file_path)
 end
 
 lane :nicegram_match do |options|

@@ -73,7 +73,6 @@ ci/Gemfile.lock
 ci/fastlane-env.sh
 ci/working_dir
 .build
-Telegram/Telegram-iOS/FirebaseRemoteConfigDefaults.plist
 *telegram-bazel-cache*
 Package_local.swift
 submodules/OpusBinding/SharedHeaders/*
@@ -101,3 +100,8 @@ tools/sim-watcher/dist/
 !/.claude/
 /.claude/*
 !/.claude/rules/
+!/.claude/settings.json
+!/.claude/skills/
+
+# MARK: Nicegram, Superpowers subagent-driven-development scratch workspace
+/.superpowers/

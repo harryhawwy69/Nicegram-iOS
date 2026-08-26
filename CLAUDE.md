@@ -7,6 +7,10 @@ This file provides guidance to AI assistants when working with code in this repo
 
 ## Build
 
+<!-- Nicegram: the values below are upstream's, not this fork's — they fail
+     with KeyError: 'google_client_scheme'. See "Build" in NICEGRAM-AGENTS.md
+     for the command and password source that work here. -->
+
 The app is built using Bazel via the `Make.py` wrapper. There is no selective per-module build — the only supported invocation builds the full `Telegram/Telegram` target.
 
 **Command:**
