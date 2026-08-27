@@ -344,6 +344,14 @@ filegroup(
     ]),
 )
 
+# Nicegram
+filegroup(
+    name = "FirebaseRemoteConfigDefaults",
+    srcs = glob([
+        "Telegram-iOS/FirebaseRemoteConfigDefaults.plist",
+    ], allow_empty=True),
+)
+
 filegroup(
     name = "LaunchScreen",
     srcs = glob([
@@ -360,6 +368,7 @@ objc_library(
 )
 
 NGRESOURCES = [
+    ":FirebaseRemoteConfigDefaults",
     ":GoogleService-Info",
     "//Nicegram/NGResources:NGImagesAssets"
 ]
@@ -1938,6 +1947,7 @@ plist_fragment(
         <string>instagram-stories</string>
         <string>yangomaps</string>
         <string>vivaldi</string>
+        <string>rizogo</string>
     </array>
     <key>LSRequiresIPhoneOS</key>
     <true/>

@@ -69,10 +69,26 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 
 
+### compile_check
+
+```sh
+[bundle exec] fastlane compile_check
+```
+
+
+
 ### upload_ipa
 
 ```sh
 [bundle exec] fastlane upload_ipa
+```
+
+
+
+### update_remote_config_defaults
+
+```sh
+[bundle exec] fastlane update_remote_config_defaults
 ```
 
 

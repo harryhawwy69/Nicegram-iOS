@@ -40,7 +40,7 @@ pipelines:
             # Fork-internal tooling and process docs stay out of the public mirror.
             # Safe to delete here (unlike packages/, which Package.swift and
             # MODULE.bazel require present): nothing in the build reads either path.
-            - rm -rf .claude docs/superpowers
+            - rm -rf .claude docs/superpowers docs/tg-merge
             # Assert the private package is recorded as a gitlink, never as
             # files. The mirror must keep packages/ as a submodule reference —
             # Package.swift and MODULE.bazel require it present for the release
@@ -53,7 +53,7 @@ pipelines:
                 echo "ERROR: packages/ has an entry that is not a gitlink ($n entries staged; non-160000 rows: $bad)"; exit 1
               fi
             - |
-              if git diff --cached --name-only --diff-filter=d | grep -qE '^(\.claude|docs/superpowers)/'; then
+              if git diff --cached --name-only --diff-filter=d | grep -qE '^(\.claude|docs/superpowers|docs/tg-merge)/'; then
                 echo "ERROR: fork-internal docs staged for the public mirror"; exit 1
               fi
             - git config user.email "denis.shilovichhh@gmail.com"

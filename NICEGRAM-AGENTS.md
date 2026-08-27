@@ -69,16 +69,56 @@ codesigning repository for you, and a hand-written `Make.py` command will use th
 wrong ones.
 
     cd ci && ./generate-project.sh                    # generate + open the Xcode project
+    cd ci && ./verify-build.sh                        # compile check (debug_sim_arm64, no match/distribution signing)
     cd ci && ./build-to-testflight.sh "1.2.3 (456)"   # QA / TestFlight build
 
-Both wrappers source `ci/fastlane-env.sh`, which is **untracked** because it holds
-credentials — obtain it from the shared env store, like the demo app's `Env.swift`.
-From a worktree, where that untracked file does not exist, they fall back to the
-main clone's copy automatically, so the same two commands work everywhere.
-After sourcing it, the wrappers **set** `SOURCE_PATH` to the tree they are
-actually running in (`SOURCE_PATH="$(cd .. && pwd)"`), overriding whatever the
-env file derived — so a build from a worktree builds that worktree, regardless
-of which checkout's path is baked into the shared env file.
+`verify-build.sh` and `generate-project.sh` both run `ci/bootstrap-submodules.sh`
+first and abort if it fails. This matters because a freshly created worktree
+starts with **every** submodule uninitialized — neither the "create worktree"
+checkbox nor the harness's `EnterWorktree` tool runs `git submodule update
+--init`, and no single harness hook covers every path that creates a
+worktree — so without this, the first build fails ~30s into Bazel with a `No
+MODULE.bazel, REPO.bazel, or WORKSPACE file found in .../rules_xcodeproj`
+error that names neither "submodule" nor "worktree". The script is idempotent
+and near-instant when nothing is missing (one `git submodule status` call);
+when something is missing it prefers cloning from the main clone's own
+gitdirs over the network (see "Starting a feature" below for why), and if it
+still can't fully initialize everything — most likely
+`packages/nicegram-assistant-ios`, which needs Bitbucket SSH access — it
+prints exactly which paths failed and exits non-zero rather than letting the
+build proceed into the confusing Bazel error above. `build-to-testflight.sh`
+skips this step: it doesn't build locally, it just pushes the branch and
+triggers the Bitbucket pipeline, which does its own recursive submodule
+checkout.
+
+All three wrappers then source `ci/_env.sh`, which sources
+`ci/fastlane-env.sh` — **untracked** because it holds credentials, obtain it
+from the shared env store, like the demo app's `Env.swift`. From a worktree,
+where that untracked file does not exist, it falls back to the main clone's
+copy automatically, so the same three commands work everywhere. (That
+fallback depends on every wrapper starting with `#!/bin/bash`: under
+`/bin/sh` — on macOS that's bash itself running in POSIX mode, reproduced
+directly — a failed `.` on a missing file aborts the shell before the `||`
+alternative runs, so the fallback would silently never fire.) `ci/_env.sh`
+then re-derives `SOURCE_PATH` itself and re-exports it, derived from its
+own file location rather than the caller's working directory
+(`SOURCE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"`), so it
+resolves correctly however `_env.sh` is sourced, not only when the
+caller happens to be sitting in `ci/`. This overrides whatever the
+untracked `fastlane-env.sh` happened to set. That's deliberate: leaving the
+guarantee "a build from a worktree builds that worktree" resting only on
+the untracked file would make it depend on every teammate's local,
+unversioned copy deriving the path the same way — one copy that
+hardcodes a stale absolute path and a worktree build silently builds the
+main clone instead, with no error. The Fastfile has its own separate
+fallback, `SOURCE_PATH = ENV["SOURCE_PATH"] || File.expand_path("../..",
+__dir__)` — a second, independent safety net for a lane invoked directly
+without going through any wrapper, not the mechanism the guarantee above
+actually rests on (`__dir__` evaluates to `"."` in fastlane's `eval`; the
+fallback only lands on the repo root because fastlane wraps that eval in
+`Dir.chdir(FastlaneFolder.path)`, i.e. `ci/fastlane`). CI sets
+`SOURCE_PATH` directly as job env before invoking a lane, so
+`ENV["SOURCE_PATH"]` wins there without ever touching `_env.sh`.
 
 The target environment comes from `ng-env.txt` (`test` or `prod`), which
 `resolve_telegram_configuration` reads to pick between
@@ -86,6 +126,12 @@ The target environment comes from `ng-env.txt` (`test` or `prod`), which
 
 Add `--continueOnError` to a `Make.py` call only if you are debugging the build
 system itself; for normal work, use the wrappers.
+
+`./verify-build.sh` is the supported way to answer "does this still compile" —
+for any change, not just an upstream merge. It uses `--continueOnError` so one
+pass reports every broken module, and it refuses to start while Xcode is
+running, because the two builds share a module cache and deadlock rather than
+fail.
 
 ### One build at a time
 
@@ -151,10 +197,16 @@ failure the landing guard below exists to catch.
 
     cd .claude/worktrees/<slug>
 
-Instead of the plain bootstrap command below, prefer the local-gitdir loop
-right after it — plain `submodule update --init` skips over any submodule
-that init has already touched, so if you run the plain command first the
-speed-up loop becomes a no-op and its ~4s / ~550 MB saving is never realised.
+**The loop below is now optional for build purposes** — `ci/verify-build.sh`
+and `ci/generate-project.sh` both run `ci/bootstrap-submodules.sh` before they
+do anything else and initialize whatever's missing on their own (see "Build"
+above for why this exists: the worktree-creation flow — neither the "create
+worktree" checkbox nor the harness's `EnterWorktree` tool — ever runs `git
+submodule update --init`, and no single harness hook covers every path that
+creates one). You only need to run the loop by hand if you want the assistant
+submodule populated **and** switched onto `feat/<slug>` in one go before your
+first build — `bootstrap-submodules.sh` brings submodules to their currently
+pinned commit, it doesn't create branches.
 
 Plain bootstrap (works, but see the faster alternative just below):
 
@@ -163,28 +215,46 @@ Plain bootstrap (works, but see the faster alternative just below):
 
 Instead of the command above, clone the submodules from the main clone's local
 gitdirs (hardlinked; measured ~4s for all 14 submodules versus refetching
-~550 MB over the network). Needs `protocol.file.allow=always` — git blocks
+~550 MB over the network — this is the same trick `ci/bootstrap-submodules.sh`
+uses under the hood). Needs `protocol.file.allow=always` — git blocks
 file-protocol submodule transports by default (CVE-2022-39253 mitigation) and
-fails with `fatal: transport 'file' not allowed` without it. Run this from
+fails with `fatal: transport 'file' not allowed` without it. Don't construct
+`$MAIN/.git/modules/<path>` by hand: it's wrong for at least one submodule —
+`packages/nicegram-assistant-ios` stores its gitdir at the legacy path
+`.git/modules/Nicegram/packages/nicegram-assistant-ios` — so ask git for the
+real gitdir instead, and guard that lookup: `git -C <dir> rev-parse
+--absolute-git-dir` walks *up* to the enclosing repo and returns *its*
+gitdir with exit 0 when `<dir>` exists but isn't itself a git repo (e.g. a
+submodule path that's also uninitialized in the main clone) — confirmed
+empirically with an empty directory inside a throwaway repo. Skip the
+lookup unless `$MAIN/$p/.git` actually exists, exactly like
+`ci/bootstrap-submodules.sh` does; without the guard this loop would
+clone the *superproject* into the submodule's path, fail confusingly, and
+leave a non-empty directory that blocks a retry. The loop below also
+scopes `git submodule sync` to just the path it initializes and parses
+`git submodule status` with `sed` instead of `awk '{print $2}'`, for the
+same two reasons `ci/bootstrap-submodules.sh` does: an unscoped sync
+rewrites `submodule.<name>.url` for *every* submodule in `.git/config` —
+which this worktree **shares with the main clone**, clobbering any
+deliberate local URL override — and `awk`'s whitespace field-split
+silently truncates any submodule path containing a space to its first
+word (this repo has 1661 tracked paths with spaces). Run this from
 inside the worktree (after the `cd` above):
 
     MAIN="$(dirname "$(git rev-parse --git-common-dir)")"
-    git submodule status | awk '{print $2}' | while read -r p; do
+    git submodule status | sed -E 's/^.[0-9a-fA-F]+ //; s/ \([^)]*\)$//' | while read -r p; do
+      gitdir=""
+      if [ -e "$MAIN/$p/.git" ]; then
+        gitdir="$(git -C "$MAIN/$p" rev-parse --absolute-git-dir 2>/dev/null)"
+      fi
       git -c protocol.file.allow=always \
-          -c "submodule.$p.url=$MAIN/.git/modules/$p" submodule update --init -- "$p"
+          -c "submodule.$p.url=${gitdir:-$MAIN/.git/modules/$p}" submodule update --init -- "$p"
+      git submodule sync -- "$p"
     done
-    git submodule sync
     git -C packages/nicegram-assistant-ios switch -c feat/<slug> origin/develop
 
 Nothing else is needed: `Make.py` regenerates `build-input/`,
 `build-input/configuration-repository`, and `xcodeproj.bazelrc` itself.
-
-One directory still needs creating by hand: `ci/working_dir` is gitignored, so
-it does not exist in a fresh worktree, and `resolve_telegram_configuration`
-fails trying to write `telegram-configuration.json` there before Bazel is ever
-reached. Create it before running any `ci/` wrapper:
-
-    mkdir -p ci/working_dir
 
 Builds from the worktree need `TELEGRAM_CODESIGNING_GIT_PASSWORD`; `ci/fastlane-env.sh`
 is untracked and absent in a fresh worktree, but the `ci/` wrappers fall back to the
@@ -213,6 +283,11 @@ main clone's copy automatically — see "Build" above. No manual sourcing needed
     afterward.
   - `Package.swift` — must stay `.package(path: "packages/nicegram-assistant-ios")`;
     never let a merge revert it back to a remote git URL dependency.
+  - `docs/tg-merge/state.json` — the merge skill's only record of the last
+    merged upstream commit. Never hand-edit the sha to make a check pass; a
+    wrong base silently produces a plausible merge against the wrong upstream.
+    Both this file and `docs/tg-merge/reports/` are stripped from the public
+    mirror by `bitbucket-pipelines.yml`.
 
 ### Building for QA
 
@@ -316,8 +391,9 @@ So, before a spec or plan containing code blocks is shown to the human:
 ## Plans are test-first where tests are worth having
 
 `packages/nicegram-assistant-ios` has a test target and a ~10-40s test loop, so
-"this repo has no test framework" is no longer a reason to skip TDD — it was the
-standing excuse through the whole `CoreRemoteConfig` migration, and it expired.
+"this repo has no test framework" is no longer a reason to skip TDD. It was the
+standing, never-negotiated excuse through the whole `CoreRemoteConfig`
+migration, and it expired.
 
 A plan task touching **pure logic** — a use case, parsing or mapping, a cache,
 value resolution — states its test first and its implementation second, so the
