@@ -15,8 +15,7 @@ swift_library(
         "//Nicegram/NGEnv:NGEnv",
         "//Nicegram/NGAppCache:NGAppCache",
         "@swiftpkg_nicegram_assistant_ios//:NGCore",
-        "@swiftpkg_nicegram_assistant_ios//:FeatBilling",
-        "@swiftpkg_nicegram_assistant_ios//:FeatSpeechToText"
+        "@swiftpkg_nicegram_assistant_ios//:FeatBilling"
     ],
     visibility = [
         "//visibility:public",

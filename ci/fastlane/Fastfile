@@ -18,6 +18,15 @@ BUNDLE_ID = ENV["BUNDLE_ID"]
 GOOGLE_APPLICATION_CREDENTIALS_BASE64 = ENV["GOOGLE_APPLICATION_CREDENTIALS_BASE64"] 
 KEYCHAIN_NAME = ENV["KEYCHAIN_NAME"]
 KEYCHAIN_PASSWORD = ENV["KEYCHAIN_PASSWORD"]
+#
+# Nicegram Build cache
+# Distribution (appstore, et al.) match gets its own ephemeral keychain,
+# derived from KEYCHAIN_NAME so no env file needs a new variable. Keeping it
+# separate from the developer's login keychain -- where `match development`
+# installs -- is the point: see nicegram_match below for why they must never
+# be the same keychain.
+#
+DISTRIBUTION_KEYCHAIN = "#{KEYCHAIN_NAME}-distribution"
 SIGN_URL = ENV["SIGN_URL"]
 SOURCE_PATH = ENV["SOURCE_PATH"] || File.expand_path("../..", __dir__)
 TEAM_ID = ENV["TEAM_ID"]
@@ -40,16 +49,49 @@ app_identifier_llc = [
   base_app_identifier_llc + ".BroadcastUpload"
 ]
 
+# Nicegram Build cache
+# One place that assembles the Make.py invocation prefix.
+#
+# Three lanes used to build this independently and had already drifted:
+# generate_project passed only --cacheDir, omitting --bazel, --bazelUserRoot and
+# --cacheHost. Harmless while those env vars are unset, but the day anyone sets
+# BAZEL_USER_ROOT the Xcode flow lands in a different bazel output root and
+# shares no cache with the other two -- a silent, expensive divergence.
+#
+# Note that Make.py itself treats cacheDir and cacheHost as mutually exclusive
+# (`if cacheDir ... elif cacheHost`), so passing both leaves the local disk
+# cache winning. That is pre-existing behaviour and is preserved here
+# deliberately; changing it is not in this feature's scope.
+def make_py_prefix
+  parts = ["cd \"#{SOURCE_PATH}\" && python3 build-system/Make/Make.py"]
+  parts << "--bazel=#{BAZEL_PATH}" unless BAZEL_PATH.nil?
+  parts << "--bazelUserRoot=#{BAZEL_USER_ROOT}" unless BAZEL_USER_ROOT.nil?
+  parts << "--cacheDir=#{BAZEL_LOCAL_CACHE}" unless BAZEL_LOCAL_CACHE.nil?
+  parts << "--cacheHost=#{BAZEL_REMOTE_CACHE}" unless BAZEL_REMOTE_CACHE.nil?
+  parts.join(" ")
+end
+#
+
 lane :beta_build do |options|
+  # A local build passes the number so the Confluence row, the Jira comment and
+  # the build in TestFlight agree by construction. CI passes nothing and keeps
+  # computing it here, which is the only source when nobody is watching.
+  supplied = options[:build_number]
+  # Refused rather than coerced: an empty string is truthy in Ruby, so `||`
+  # never reaches the fallback, and `"".to_i` / `"abc".to_i` are both 0 --
+  # a build 0 uploaded to TestFlight under the version the caller asked for.
+  unless supplied.nil? || supplied.to_s.strip.match?(/\A\d+\z/)
+    UI.user_error!("build_number: #{supplied.inspect} is not a build number")
+  end
   build(
-    build_number: latest_testflight_build_number(
+    build_number: (supplied || latest_testflight_build_number(
       api_key: generate_app_store_connect_api_key(),
       app_identifier: BUNDLE_ID
-    ) + 1,
+    ) + 1).to_i,
     embed_watch_app: true,
     upload_to_tf: true
   )
-  
+
   upload_dsyms()
 end
 
@@ -124,7 +166,8 @@ lane :build do |options|
     upload_ipa(ipa: ipa_path)
   end
 
-  delete_keychain_if_exists(name: KEYCHAIN_NAME)
+  # Nicegram Build cache: distribution keychain only -- see nicegram_match.
+  delete_keychain_if_exists(name: DISTRIBUTION_KEYCHAIN)
 end
 
 lane :resolve_telegram_configuration do |options|
@@ -171,23 +214,7 @@ lane :build_bazel do |options|
   # parent is missing.
   FileUtils.mkdir_p(artifacts_path)
 
-  shell_command = "cd #{SOURCE_PATH} && python3 build-system/Make/Make.py "
-
-  unless BAZEL_PATH.nil?
-    shell_command += "--bazel=#{BAZEL_PATH} "
-  end
-
-  unless BAZEL_USER_ROOT.nil?
-    shell_command += "--bazelUserRoot=#{BAZEL_USER_ROOT} "
-  end
-
-  unless BAZEL_LOCAL_CACHE.nil?
-    shell_command += "--cacheDir=#{BAZEL_LOCAL_CACHE} "
-  end
-
-  unless BAZEL_REMOTE_CACHE.nil?
-    shell_command += "--cacheHost=#{BAZEL_REMOTE_CACHE} "
-  end
+  shell_command = "#{make_py_prefix} "
 
   shell_command += "build \
   --configurationPath=#{configuration_path} \
@@ -225,35 +252,96 @@ lane :generate_project do |options|
 
   ensure_xcode_symlink()
 
-  sh "cd #{SOURCE_PATH} && python3 build-system/Make/Make.py \
-  --cacheDir=#{BAZEL_LOCAL_CACHE} \
-  generateProject \
+  sh "#{make_py_prefix} generateProject \
   --configurationPath=#{configuration_path} \
   --buildNumber=55555 \
   --gitCodesigningRepository=#{SIGN_URL} \
   --gitCodesigningType=development"
 end
 
-lane :compile_check do |options|
+# Nicegram Build cache
+# Resolves build-input/configuration-repository -- the local bazel module that
+# carries variables.bzl (bundle ids, api id/hash, aps environment, and the
+# absolute path to this checkout's bazel binary) and the provisioning profiles
+# fetched from the codesigning repository -- WITHOUT building anything and
+# WITHOUT generating an Xcode project.
+#
+# Why a lane of its own: ci/verify-build.sh no longer goes through `Make.py
+# build`, so nothing else in its path would re-resolve the configuration. That
+# matters for two reasons that both fail silently otherwise:
+#   * flipping ng-env.txt between test and prod changes bundle ids and api
+#     credentials; without re-resolution the gate would keep building the
+#     previous environment's configuration and look perfectly healthy.
+#   * `resolve_configuration` re-fetches the provisioning profiles on every
+#     run (it deletes and repopulates the provisioning directory), which is
+#     what keeps a device build's signing inputs current.
+#
+# `query` is the only Make.py subcommand that resolves the configuration and
+# then does something cheap instead of building the app (Make.py:783-810). Its
+# --queryArgs is required, so it gets the xcodeproj runner target, which is
+# cheap to analyse -- the heavy analysis all happens in the generator target
+# inside the nested output base, not here. `--output=summary` keeps it quiet:
+# the default text output dumps the runner script's own source, which contains
+# lines like `fail "ERROR: ..."` and reads alarmingly in a build log.
+lane :resolve_config do |options|
   configuration_path = resolve_telegram_configuration()
 
   ensure_xcode_symlink()
 
-  # Compile-only gate: simulator configuration, no match, no codesigning of the
-  # output, no upload. --continueOnError forwards to bazel's --keep_going so a
-  # merge that breaks twenty modules reports all twenty in one pass instead of
-  # stopping at the first.
-  shell_command = "cd \"#{SOURCE_PATH}\" && python3 build-system/Make/Make.py "
-  shell_command += "--bazel=#{BAZEL_PATH} " unless BAZEL_PATH.nil?
-  shell_command += "--bazelUserRoot=#{BAZEL_USER_ROOT} " unless BAZEL_USER_ROOT.nil?
-  shell_command += "--cacheDir=#{BAZEL_LOCAL_CACHE} " unless BAZEL_LOCAL_CACHE.nil?
-  shell_command += "--cacheHost=#{BAZEL_REMOTE_CACHE} " unless BAZEL_REMOTE_CACHE.nil?
+  sh "#{make_py_prefix} query \
+  --configurationPath=#{configuration_path} \
+  --gitCodesigningRepository=#{SIGN_URL} \
+  --gitCodesigningType=development \
+  --queryArgs='--output=summary //Telegram:Telegram_xcodeproj'"
+end
+#
+
+lane :compile_check do |options|
+  # Nicegram Build cache
+  # NOTHING IN THIS REPO CALLS THIS LANE. It is kept deliberately, and only for
+  # hand invocation, the same way ci/nicegram-match.sh is -- do not delete it
+  # because a grep says it is dead.
+  #
+  # ci/verify-build.sh stopped using it on 2026-08-28: the gate builds through
+  # rules_xcodeproj's command-line API so that its actions share cache with
+  # Xcode, and this lane cannot, by construction. It builds plain target labels,
+  # which land in a different bazel configuration -- that is the whole finding
+  # this branch rests on. Measured on this machine: a cold simulator label build
+  # took 179s at 78% disk-cache hits, while the device one took 1114s at 0%,
+  # because nothing else here builds a device label; the API path gets the same
+  # work in seconds.
+  #
+  # So reach for it only to answer "is the API path itself broken, or is my code
+  # broken?" -- and expect it to cost a full rebuild of the configuration it
+  # builds, since nothing else populates it:
+  #
+  #   cd ci && fastlane compile_check configuration:debug_arm64
+  #
+  # If you find yourself running it twice, fix the API path instead.
+  #
+  # Use `options[:configuration] ||` deliberately: the value is always a
+  # non-empty string or nil, so `||` cannot clobber a meaningful `false` the
+  # way resolve_telegram_configuration's is_appstore_build bug does (tracked
+  # separately).
+  configuration = options[:configuration] || "debug_sim_arm64"
+  #
+  configuration_path = resolve_telegram_configuration()
+
+  ensure_xcode_symlink()
+
+  # Compile-only gate: no match, no upload. The device configuration does sign
+  # the app and its extensions (it needs a resolved identity -- see
+  # ci/verify-build.sh's pre-flight); the simulator configuration does not.
+  # --continueOnError forwards to bazel's --keep_going so a merge that breaks
+  # twenty modules reports all twenty in one pass instead of stopping at the
+  # first.
+  shell_command = "#{make_py_prefix} "
   shell_command += "build --continueOnError \
   --configurationPath=#{configuration_path} \
   --gitCodesigningRepository=#{SIGN_URL} \
   --gitCodesigningType=development \
   --buildNumber=55555 \
-  --configuration=debug_sim_arm64"
+  --configuration=#{configuration}"
 
   sh shell_command, error_callback: lambda { |result| raise "❌ compile_check failed\n#{result}" }
 end
@@ -297,21 +385,57 @@ end
 lane :nicegram_match do |options|
   type = options[:type]
 
-  ensure_temp_keychain(
-    name: KEYCHAIN_NAME, 
-    password: KEYCHAIN_PASSWORD
-  )
+  #
+  # Nicegram Build cache
+  # `development` used to share KEYCHAIN_NAME with every other type. A release
+  # build (type: "appstore") runs ensure_temp_keychain on that same name,
+  # which deletes and recreates it -- so the last step of every local release
+  # build silently destroyed the developer's development signing certificate,
+  # and `build`'s closing delete_keychain_if_exists (and the error handler on
+  # any lane failure) deleted it outright. The developer then had to re-run
+  # `ci/nicegram-match.sh development` by hand before the next Xcode device
+  # build would codesign again.
+  #
+  # Fix: `development` now installs into the login keychain instead -- omit
+  # keychain_name/keychain_password so `match` uses its default, and skip
+  # ensure_temp_keychain entirely, since there is no ephemeral keychain to
+  # create or tear down. This is not a stylistic choice: a *named* dev
+  # keychain would still be wrong, because it locks after every reboot and
+  # codesign needs the private key unlocked -- that would only trade "broken
+  # after every release build" for "broken after every reboot". The login
+  # keychain is the one macOS unlocks automatically at login.
+  #
+  # Every other type (appstore, ...) keeps today's ephemeral-keychain
+  # behaviour unchanged, just on DISTRIBUTION_KEYCHAIN instead of
+  # KEYCHAIN_NAME, so CI (which only ever passes type: "appstore") is
+  # unaffected and distribution credentials still never linger.
+  #
+  if type == "development"
+    match(
+      type: type,
+      app_identifier: app_identifier_llc,
+      team_id: TEAM_ID,
+      git_url: SIGN_URL,
+      git_branch: TEAM_ID,
+      api_key: generate_app_store_connect_api_key()
+    )
+  else
+    ensure_temp_keychain(
+      name: DISTRIBUTION_KEYCHAIN,
+      password: KEYCHAIN_PASSWORD
+    )
 
-  match(
-    type: type,
-    app_identifier: app_identifier_llc,
-    team_id: TEAM_ID,
-    git_url: SIGN_URL,
-    git_branch: TEAM_ID,
-    api_key: generate_app_store_connect_api_key(),
-    keychain_name: KEYCHAIN_NAME,
-    keychain_password: KEYCHAIN_PASSWORD
-  )
+    match(
+      type: type,
+      app_identifier: app_identifier_llc,
+      team_id: TEAM_ID,
+      git_url: SIGN_URL,
+      git_branch: TEAM_ID,
+      api_key: generate_app_store_connect_api_key(),
+      keychain_name: DISTRIBUTION_KEYCHAIN,
+      keychain_password: KEYCHAIN_PASSWORD
+    )
+  end
 end
 
 lane :upload_dsyms do |options|
@@ -359,11 +483,6 @@ lane :delete_keychain_if_exists do |options|
   delete_keychain(name: name) if File.exist?(File.expand_path("~/Library/Keychains/#{name}-db"))
 end
 
-lane :log do |options|
-  message = options[:message]
-  # tg(message: message)
-end
-
 lane :tg do |options|
   message = options[:message]
   parse_mode = options[:parse_mode]
@@ -385,7 +504,7 @@ lane :ensure_xcode_symlink do
   end
 end
 
-error do |_, exception|
-    delete_keychain_if_exists(name: KEYCHAIN_NAME)
-    log(message: "❌ Error building Nicegram\n#{exception}")
+error do |_, _exception|
+    # Nicegram Build cache: distribution keychain only -- see nicegram_match.
+    delete_keychain_if_exists(name: DISTRIBUTION_KEYCHAIN)
 end

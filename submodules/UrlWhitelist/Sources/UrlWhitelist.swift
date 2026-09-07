@@ -1,4 +1,7 @@
 import Foundation
+// Nicegram Domain
+import NGWebDomains
+//
 
 private let whitelistedHosts: Set<String> = Set([
     "t.me",
@@ -37,7 +40,8 @@ public func parseUrl(url: String, wasConcealed: Bool) -> (string: String, concea
     var parsedUrlValue: URL?
     if url.hasPrefix("tel:") {
         return (url, false)
-    } else if let parsed = URL(string: url), (parsed.host ?? "").contains("nicegram.app") {
+    // Nicegram Domain, exact host match against our claimed domains
+    } else if let parsed = URL(string: url), NicegramWebDomains.contains(parsed.host) {
         return (url, false)
     } else if url.lowercased().hasPrefix("http://") || url.lowercased().hasPrefix("https://"), let parsed = URL(string: url) {
         parsedUrlValue = parsed

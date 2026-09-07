@@ -9,6 +9,10 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
+    # Nicegram Domain
+    deps = [
+        "//Nicegram/NGWebDomains:NGWebDomains",
+    ],
     visibility = [
         "//visibility:public",
     ],

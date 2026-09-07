@@ -80,10 +80,38 @@ class BazelCommandLine:
         ]
 
         num_threads = max(os.cpu_count() - 2, 2)
+        # Nicegram Build cache
+        # Two changes to this list, both about action-key alignment between the
+        # Xcode build and ci/verify-build.sh:
+        #
+        # 1. The copt values lost their quotes. These reach bazel as argv
+        #    entries, not through a shell, so `"-j"` arrived in the swiftc params
+        #    file with the quote characters literally present. Swift's
+        #    response-file parser treats quotes as syntax and strips them, so the
+        #    compiler saw `-j 9` either way (verified: `xcrun swiftc @resp
+        #    -typecheck x.swift` succeeds with a response file containing `"-j"`,
+        #    while the same token on the command line fails with
+        #    `error: unexpected input file: "-j"`). But params-file content is
+        #    part of the action key, and the Xcode flow receives these through a
+        #    bazelrc, already unquoted -- so this difference alone gave every
+        #    Swift compile a different cache key between the two flows.
+        #
+        # 2. --config=ng_dev, defined in ci/nicegram.bazelrc, is the canonical
+        #    dev debug configuration. It belongs on this list specifically
+        #    because this list is the one thing included by BOTH
+        #    invoke_build()'s debug configuration_args AND
+        #    get_project_generation_arguments() -- so the compile gate and the
+        #    generated Xcode project request the same configuration from one
+        #    line, and release_arm64 (which uses common_release_args) does not
+        #    get it. release_sim_arm64 does share this list and so also gets
+        #    ng_dev; no lane builds that configuration and an -Osize simulator
+        #    build is never shipped.
         self.common_debug_args = [
-            '--@build_bazel_rules_swift//swift:copt="-j"',
-            f'--@build_bazel_rules_swift//swift:copt="{num_threads}"',
+            '--@build_bazel_rules_swift//swift:copt=-j',
+            f'--@build_bazel_rules_swift//swift:copt={num_threads}',
+            '--config=ng_dev',
         ]
+        #
 
         self.common_release_args = [
             # https://github.com/bazelbuild/rules_swift

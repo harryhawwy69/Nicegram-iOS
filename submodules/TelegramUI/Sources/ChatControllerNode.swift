@@ -326,8 +326,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var cancellables = Set<AnyCancellable>()
     //
     
-    // Nicegram Voice Typing
-    private var voiceTypingHostingController: UIViewController?
+    // Nicegram Transcription
+    private var voiceTypingOverlay: VoiceRecordingOverlay?
     //
     
     // Nicegram AiChat
@@ -1198,7 +1198,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         //
         
-        // Nicegram Voice Typing
+        // Nicegram Transcription
         self.textInputPanelNode?.displayVoiceTypingFlow = { [weak self] in
             guard let self else {
                 return
@@ -1211,7 +1211,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             VoiceTypingHelper().present(
                 onReadyToRecord: { [weak self] in
                     guard let self else { return }
-                    guard #available(iOS 15.0, *) else { return }
+                    guard #available(iOS 16.0, *) else { return }
                     self.showVoiceTypingOverlay()
                 }
             )
@@ -1264,21 +1264,21 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.inlineSearchResultsReadyDisposable?.dispose()
         self.loadMoreSearchResultsDisposable?.dispose()
         
-        // Nicegram Voice Typing
-        if #available(iOS 15.0, *) {
+        // Nicegram Transcription
+        if #available(iOS 16.0, *) {
             self.hideVoiceTypingOverlay()
         }
         //
     }
     
-    // Nicegram Voice Typing
-    @available(iOS 15.0, *)
+    // Nicegram Transcription
+    @available(iOS 16.0, *)
     private func showVoiceTypingOverlay() {
-        guard voiceTypingHostingController == nil else {
+        guard voiceTypingOverlay == nil else {
             return
         }
         
-        let hostingController = VoiceTypingOverlayHostingControllerFactory.make(
+        let overlay = VoiceRecordingOverlay(
             eventsHandler: { [weak self] event in
                 guard let self else { return }
                 
@@ -1316,20 +1316,20 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
         )
         
-        voiceTypingHostingController = hostingController
-        self.textInputPanelNode?.setVoiceTypingOverlayView(hostingController.view)
+        voiceTypingOverlay = overlay
+        self.textInputPanelNode?.setVoiceTypingOverlayView(overlay.view)
     }
     
-    // Nicegram Voice Typing
-    @available(iOS 15.0, *)
+    // Nicegram Transcription
+    @available(iOS 16.0, *)
     private func hideVoiceTypingOverlay() {
-        guard let hostingController = voiceTypingHostingController else {
+        guard let overlay = voiceTypingOverlay else {
             return
         }
         
-        voiceTypingHostingController = nil
+        voiceTypingOverlay = nil
         self.textInputPanelNode?.setVoiceTypingOverlayView(nil)
-        hostingController.view.removeFromSuperview()
+        overlay.view.removeFromSuperview()
     }
     //
     
@@ -4103,6 +4103,18 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         )
         //
         self.selectedMessages = chatPresentationInterfaceState.interfaceState.selectionState?.selectedIds
+        
+        // Nicegram Transcription
+        // Selecting messages swaps the text input panel out for the selection
+        // panel, and the recording overlay is a subview of the text panel -- so
+        // the recorder is pulled out of the window with nowhere to show itself.
+        // End the session deliberately instead of leaving it running unseen.
+        // No-op when nothing is recording, and once transcription has started
+        // this leaves it alone so a result already on its way still arrives.
+        if chatPresentationInterfaceState.interfaceState.selectionState != nil {
+            self.voiceTypingOverlay?.cancel()
+        }
+        //
         
         var textStateUpdated = false
         if let textInputPanelNode = self.textInputPanelNode {

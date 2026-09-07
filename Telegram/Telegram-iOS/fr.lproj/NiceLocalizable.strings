@@ -84,7 +84,6 @@
 "Folder.DeleteAsk" = "Supprimer le dossier";
 "Folder.NeedPremium" = "Ce dossier est uniquement disponible avec Premium. Vous pouvez obtenir Premium ou supprimer un dossier par glissement.";
 "Common.SupportChatUsername" = "nicegramchat";
-"Common.FAQUrl" = "https://nicegram.app/faq/";
 "Common.FAQ.Button" = "FAQ Nicegram";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Des fonctionnalités uniques que vous ne pouvez pas refuser !";

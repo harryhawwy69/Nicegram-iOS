@@ -14,6 +14,7 @@ import NGLogging
 import NGRepoUser
 import NGStrings
 import NGUtils
+import NGWebDomains
 import NicegramWallet
 //
 import UIKit
@@ -437,10 +438,12 @@ private class UserInterfaceStyleObserverWindow: UIWindow {
                 isAppStoreBuild: buildConfig.isAppStoreBuild,
                 isProd: NGENV.is_prod,
                 premiumProductId: NGENV.premium_bundle,
-                privacyUrl: URL(string: "https://nicegram.app/privacy-policy")!,
                 referralBot: NGENV.referral_bot,
                 telegramAuthBot: NGENV.telegram_auth_bot,
-                termsUrl: URL(string: "https://nicegram.app/terms-of-use")!,
+                webDomains: WebDomains(
+                    all: NicegramWebDomains.all,
+                    primary: NicegramWebDomains.primary
+                ),
                 webSocketUrl: NGENV.websocket_url
             ),
             accountBackupBridge: {
@@ -532,7 +535,8 @@ private class UserInterfaceStyleObserverWindow: UIWindow {
             walletData: .init(
                 env: {
                     .init(
-                        appUniversalLinkDomain: NGCore.UrlUtils.ASSOCIATED_DOMAIN,
+                        // Nicegram Domain
+                        appUniversalLinkDomain: NicegramWebDomains.primary,
                         appUrlScheme: buildConfig.appSpecificUrlScheme,
                         enableLogging: ngEnableLogging,
                         keychainGroupIdentifier: NGENV.wallet.keychainGroupIdentifier,

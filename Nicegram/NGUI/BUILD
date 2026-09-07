@@ -38,7 +38,7 @@ swift_library(
         "@swiftpkg_nicegram_assistant_ios//:FeatCallRecorder",
         "@swiftpkg_nicegram_assistant_ios//:FeatDataSharing",
         "@swiftpkg_nicegram_assistant_ios//:FeatPinnedChats",
-        "@swiftpkg_nicegram_assistant_ios//:FeatSpeechToText",
+        "@swiftpkg_nicegram_assistant_ios//:FeatTranscription",
         "@swiftpkg_nicegram_assistant_ios//:FeatAiShortcuts",
     ],
     visibility = [

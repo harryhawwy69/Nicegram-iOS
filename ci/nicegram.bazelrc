@@ -1,0 +1,109 @@
+# Nicegram Build cache
+# Fork-owned bazel policy. Tracked, and the single place our flags live.
+#
+# Loaded by every bazel invocation through one `try-import` appended to the
+# upstream .bazelrc: the CLI flows, the Xcode build (rules_xcodeproj passes
+# --bazelrc=.bazelrc), and a hand-run `bazel` all read it. Keeping our flags
+# here instead of inline shrinks the fork's .bazelrc diff from a 24-line block
+# in the middle of that file to five appended lines at its very end.
+#
+# try-import, not import: this file is fork-owned and always tracked, so the
+# two behave identically here and the `try-import` is a statement of intent
+# rather than a graceful degradation. It could not degrade gracefully anyway:
+# Make.py's `common_debug_args` passes `--config=ng_dev` for every debug build
+# and for project generation, and `ng_dev` is defined only here, so losing this
+# file fails immediately with
+# `Config value 'ng_dev' is not defined in any .rc file`.
+
+# ---------------------------------------------------------------------------
+# Deprecation demotion (moved verbatim out of .bazelrc, 2026-08)
+# ---------------------------------------------------------------------------
+# Our min-iOS bump (13 -> 15) introduced many deprecation warnings in
+# upstream-owned files that we deliberately don't fix ourselves -- upstream
+# Telegram will clean them up when they bump min-iOS. To keep strict-warnings
+# policy (`-warnings-as-errors` for Swift, `-Werror` for Clang) intact
+# everywhere else, we demote only deprecation diagnostics back to warning.
+#
+# Swift: `-Wwarning DeprecatedDeclaration` re-classifies the diagnostic group
+# back to warning even under `-warnings-as-errors`. rules_swift appends
+# `--@//swift:copt` flags AFTER per-target `copts`, so this override wins.
+# Requires Swift 5.10+ / Xcode 15.3+ (older toolchains reject `-Wwarning`).
+#
+# Clang: `-Wno-error=deprecated-declarations` via --per_file_copt does the
+# same for `.m`/`.mm` sources. Per-file copts are appended AFTER target-level
+# `copts`, so the override wins over `-Werror`. Scoped to ObjC because the
+# affected APIs are iOS-SDK constants like UTTypeConformsTo / kUTTypeGIF;
+# pure C/C++ targets (boringssl, td, brotli, libphonenumber, libjxl) don't
+# touch them and stay strict.
+#
+# TODO: remove these four lines once upstream Telegram bumps its min-iOS to
+# >= 15 and the deprecation warnings are gone.
+build --@build_bazel_rules_swift//swift:copt=-Wwarning
+build --@build_bazel_rules_swift//swift:copt=DeprecatedDeclaration
+build --per_file_copt=".*\.m$","@-Wno-error=deprecated-declarations"
+build --per_file_copt=".*\.mm$","@-Wno-error=deprecated-declarations"
+
+# ---------------------------------------------------------------------------
+# Disk cache bounds
+# ---------------------------------------------------------------------------
+# The disk cache had no bound and had reached 42 GB. Bazel 8.4.2 collects it
+# itself; both defaults are 0, meaning never. Values verified to parse with
+# `bazel canonicalize-flags` on our vendored 8.4.2 -- re-verify if you change
+# the syntax.
+#
+# Collection runs in the *idle* bazel server after
+# --experimental_disk_cache_gc_idle_delay (default 5m), so it happens between
+# builds, never during one. A machine that never leaves a server idle will not
+# collect; `ci/clean-caches.sh` reports the size so that is visible.
+#
+# These are `build` lines, which bazel also applies to test/run/coverage.
+build --experimental_disk_cache_gc_max_size=100G
+build --experimental_disk_cache_gc_max_age=45d
+
+# ---------------------------------------------------------------------------
+# ng_dev: makes upstream's dead emit_swiftsourceinfo line real
+# ---------------------------------------------------------------------------
+# Requested by every dev flow through a single --config=ng_dev added to
+# Make.py's common_debug_args, which is the one list included by both
+# invoke_build() and get_project_generation_arguments(). So it reaches the
+# generated xcodeproj.bazelrc -- and therefore both the Xcode build and
+# ci/verify-build.sh, which since 2026-08-28 builds through rules_xcodeproj's
+# command-line API and so reads that same file -- and the release lanes, which
+# go through invoke_build() and get common_release_args instead.
+#
+# This config used to also carry eleven flags (including
+# --//Telegram:disableStripping) whose only purpose was making the CLI and
+# Xcode flows request byte-identical bazel configurations, so their ~1000
+# swift_library compiles would produce identical action keys and share
+# disk-cache entries. That sharing was measured impossible (Task 14) and the
+# flags were removed. The alignment itself worked: the swiftc command lines
+# for submodules/Display became character-for-character identical between
+# the two flows. Sharing still did not follow, because output paths are part
+# of every action key, and the two flows' configuration directory names
+# differ by their `-ST-<hash>` suffix regardless of the flags above --
+# measured
+#   CLI   ios_arm64-dbg-ios-arm64-min15.0-ST-a7beea3c269e
+#   Xcode ios_arm64-dbg-ios-arm64-min15.0-ST-9cbb67e27a8f
+# with zero overlap across all seven min-version configs, and both hashes
+# byte-identical to their pre-alignment values -- adding the eleven flags
+# changed neither. The `-ST-` suffix derives from the Starlark transition
+# path, not from flags: the Xcode flow reaches its configuration through the
+# rules_xcodeproj generator label.
+#
+# That gap has since been closed, but not from here: ci/verify-build.sh now
+# runs bazel THROUGH that generator label using rules_xcodeproj's command-line
+# API, which puts it on the same transition path and so on the same action
+# keys. Read that script's header for the measurements. What stands here is the
+# narrower fact: no flag in this file, or in any bazelrc, can make a plain
+# `bazel build <label>` share with Xcode. So do not re-add
+# --//Telegram:disableStripping or the other ten flags expecting a label build
+# to start sharing; it cannot, and disableStripping in particular is a flag we
+# would rather not have anywhere near a build that does not need it.
+#
+# What's left has nothing to do with sharing: it makes upstream's intent
+# real, since .bazelrc's `build:dbg --features=swift.emit_swiftsourceinfo`
+# has never applied to anything -- nothing passes `--config=dbg` (`-c dbg` is
+# --compilation_mode, a different flag). Upstream owns that line, so it stays
+# where it is; this is where the intent actually takes effect. Release builds
+# never pass --config=ng_dev and are unaffected.
+build:ng_dev --features=swift.emit_swiftsourceinfo

@@ -38,7 +38,6 @@ import NGUtils
 import PeerInfoUI
 import func Postbox.fileSize
 import NGData
-import NGSpeechToText
 import AVFoundation
 //
 import TranslateUI
@@ -1106,29 +1105,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 break
             }
         }
-        // Nicegram NCG-6326 Apple Speech2Text
-        let voiceFile = message.media
-            .compactMap { $0 as? TelegramMediaFile }
-            .first { $0.isVoice }
-        if voiceFile != nil {
-            didRateAudioTranscription = true
-            actions.append(.action(ContextMenuActionItem(
-                text: l("NicegramSpeechToText.SelectLanguage"),
-                icon: { _ in nil },
-                action: { _, f in
-                    Task { @MainActor in
-                        _ = await ngShowSpeechToTextLocaleSelection(
-                            context: context,
-                            navigationController: controllerInteraction.navigationController(),
-                            message: message
-                        )
-                    }
-                    f(.dismissWithoutContent)
-                }
-            )))
-            actions.append(.separator)
-        }
-        //
         var hasRateTranscription = false
         if hasExpandedAudioTranscription, let audioTranscription = audioTranscription, !didRateAudioTranscription {
             hasRateTranscription = true

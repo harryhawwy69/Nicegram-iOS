@@ -3,7 +3,6 @@ import FeatBilling
 import Postbox
 import Foundation
 import NGAppCache
-import FeatSpeechToText
 
 @propertyWrapper
 public struct NGStorage<T: Codable> {
@@ -102,9 +101,6 @@ public struct NGSettings {
     
     @NGStorage(key: "recordAllCalls", defaultValue: false)
     public static var recordAllCalls: Bool
-    
-    @NGStorage(key: "appleSpeechToTextLocale", defaultValue: [:])
-    public static var appleSpeechToTextLocale: [Int64: Locale]
 }
 
 public struct NGWebSettings {
