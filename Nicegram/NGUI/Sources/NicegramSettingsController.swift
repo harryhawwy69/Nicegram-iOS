@@ -17,6 +17,7 @@ import FeatCallRecorder
 import FeatCalls
 import FeatDataSharing
 import FeatPinnedChats
+import FeatTranscription
 import Foundation
 import ItemListUI
 import NGData
@@ -66,6 +67,7 @@ private final class NicegramSettingsControllerArguments {
 
 private enum NicegramSettingsControllerSection: Int32 {
     case Tabs
+    case SpeechToText
     case Folders
     case RoundVideos
     case Account
@@ -94,7 +96,11 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
     case TabsHeader(String)
     case showContactsTab(String, Bool)
     case showCallsTab(String, Bool)
-    
+
+    case speechToTextHeader(String)
+    case textCleanup(String, String, Bool)
+    case transcribeModel(String, String)
+
     case pinnedChatsHeader
     case pinnedChat(PinnedChat)
     struct PinnedChat: Equatable {
@@ -148,6 +154,8 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
         switch self {
         case .TabsHeader, .showContactsTab, .showCallsTab:
             return NicegramSettingsControllerSection.Tabs.rawValue
+        case .speechToTextHeader, .textCleanup, .transcribeModel:
+            return NicegramSettingsControllerSection.SpeechToText.rawValue
         case .FoldersHeader, .foldersKeywords:
             return NicegramSettingsControllerSection.Folders.rawValue
         case .RoundVideosHeader, .startWithRearCam, .shouldDownloadVideo:
@@ -193,7 +201,16 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             
         case .showCallsTab:
             return 1500
-            
+
+        case .speechToTextHeader:
+            return 1600
+
+        case .textCleanup:
+            return 1610
+
+        case .transcribeModel:
+            return 1620
+
         case .FoldersHeader:
             return 1700
             
@@ -292,7 +309,22 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
                     let _ = ApplicationSpecificNotice.incrementCallsTabTips(accountManager: arguments.context.sharedContext.accountManager, count: 4).start()
                 }
             })
-            
+
+        case let .speechToTextHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
+
+        case let .textCleanup(title, subtitle, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, text: subtitle, value: value, sectionId: section, style: .blocks, updated: { value in
+                Task {
+                    await FeatTranscription.Module.shared.updateSettingsUseCase().setTextCleanupEnabled(value)
+                }
+            })
+
+        case let .transcribeModel(title, label):
+            return ItemListDisclosureItem(presentationData: presentationData, title: title, label: label, labelStyle: .multilineDetailText, sectionId: section, style: .blocks, action: {
+                arguments.pushController(transcriptionModelController(context: arguments.context))
+            })
+
         case let .FoldersHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: section)
             
@@ -500,7 +532,7 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
 
 // MARK: Entries list
 
-private func nicegramSettingsControllerEntries(presentationData: PresentationData, experimentalSettings: ExperimentalUISettings, showCalls: Bool, pinnedChats: [NicegramSettingsControllerEntry.PinnedChat], sharingSettings: FeatDataSharing.Settings, aiShortcutsSettings: FeatAiShortcuts.Settings, accountBackupSettings: FeatAccountBackup.Settings, context: AccountContext) -> [NicegramSettingsControllerEntry] {
+private func nicegramSettingsControllerEntries(presentationData: PresentationData, experimentalSettings: ExperimentalUISettings, showCalls: Bool, pinnedChats: [NicegramSettingsControllerEntry.PinnedChat], sharingSettings: FeatDataSharing.Settings, aiShortcutsSettings: FeatAiShortcuts.Settings, accountBackupSettings: FeatAccountBackup.Settings, transcriptionSettings: FeatTranscription.Settings, context: AccountContext) -> [NicegramSettingsControllerEntry] {
     let nicegramSettings = getNicegramSettings()
     
     var entries: [NicegramSettingsControllerEntry] = []
@@ -525,6 +557,20 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
         l("NiceFeatures.Tabs.ShowCalls"),
         showCalls
     ))
+
+    let transcriptionAvailableModels = FeatTranscription.Module.shared.getConfigUseCase()().availableModels
+    entries.append(.speechToTextHeader(FeatTranscription.strings.settingsSection().uppercased()))
+    entries.append(.textCleanup(
+        FeatTranscription.strings.settingsCleanupTitle(),
+        FeatTranscription.strings.settingsCleanupSubtitle(),
+        transcriptionSettings.textCleanupEnabled
+    ))
+    if !transcriptionAvailableModels.isEmpty {
+        entries.append(.transcribeModel(
+            FeatTranscription.strings.settingsModelTitle(),
+            transcriptionSettings.selectedModel.name
+        ))
+    }
 
     entries.append(.FoldersHeader(l("NiceFeatures.Folders.Header")))
     let peerId = context.account.peerId.toInt64()
@@ -728,7 +774,12 @@ public func nicegramSettingsController(context: AccountContext, accountsContexts
         .toSignal()
         .skipError()
 
-    let signal = combineLatest(context.sharedContext.presentationData, sharedDataSignal, showCallsTab, pinnedChatsSignal, sharingSettingsSignal, aiShortcutsSettingsSignal, accountBackupSettingsSignal) |> map { presentationData, sharedData, showCalls, pinnedChats, sharingSettings, aiShortcutsSettings, accountBackupSettings -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let transcriptionSettingsSignal = FeatTranscription.Module.shared.getSettingsUseCase()
+        .publisher()
+        .toSignal()
+        .skipError()
+
+    let signal = combineLatest(context.sharedContext.presentationData, sharedDataSignal, showCallsTab, pinnedChatsSignal, sharingSettingsSignal, aiShortcutsSettingsSignal, accountBackupSettingsSignal, transcriptionSettingsSignal) |> map { presentationData, sharedData, showCalls, pinnedChats, sharingSettings, aiShortcutsSettings, accountBackupSettings, transcriptionSettings -> (ItemListControllerState, (ItemListNodeState, Any)) in
 
         let experimentalSettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
 
@@ -739,7 +790,7 @@ public func nicegramSettingsController(context: AccountContext, accountsContexts
             })
         }
 
-        let entries = nicegramSettingsControllerEntries(presentationData: presentationData, experimentalSettings: experimentalSettings, showCalls: showCalls, pinnedChats: pinnedChats, sharingSettings: sharingSettings, aiShortcutsSettings: aiShortcutsSettings, accountBackupSettings: accountBackupSettings, context: context)
+        let entries = nicegramSettingsControllerEntries(presentationData: presentationData, experimentalSettings: experimentalSettings, showCalls: showCalls, pinnedChats: pinnedChats, sharingSettings: sharingSettings, aiShortcutsSettings: aiShortcutsSettings, accountBackupSettings: accountBackupSettings, transcriptionSettings: transcriptionSettings, context: context)
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(l("AppName")), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: strings.back()))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks)
 

@@ -1,12 +1,12 @@
 // Nicegram Imports
 import FeatPaywall
-import FeatSpeechToText
+import FeatTranscription
 import NGData
 import NGStrings
 import NGTelegramIntegration
 import NGTranslate
 import NGUI
-import NGSpeechToText
+import NGUtils
 //
 import Foundation
 import UIKit
@@ -370,7 +370,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: arguments.context.currentAppConfiguration.with { $0 })
         
         let transcriptionText = self.forcedAudioTranscriptionText ?? transcribedText(message: EngineMessage(message))
-        // Nicegram NCG-6326 Apple Speech2Text, added false to skip this condition
+        // Nicegram Transcription, added false to skip this condition
         if transcriptionText == nil && !arguments.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost && false {
             if premiumConfiguration.audioTransciptionTrialCount > 0 {
                 if !arguments.associatedData.isPremium {
@@ -484,7 +484,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         strongSelf.transcribeDisposable?.dispose()
                         strongSelf.transcribeDisposable = nil
                     })
-                // Nicegram NCG-6326 Apple Speech2Text
+                // Nicegram Transcription
                 } else if !isLongMedia() && arguments.associatedData.isPremium {
                     self.transcribeDisposable = (context.engine.messages.transcribeAudio(messageId: message.id)
                     |> deliverOnMainQueue).startStrict(next: { [weak self] result in
@@ -500,23 +500,25 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             })
                         }
                     })
-                // Nicegram NCG-6326 Apple Speech2Text
+                // Nicegram Transcription
                 } else {
                     Task { @MainActor in
                         updateStateAndLayout {
                             self.audioTranscriptionState = .inProgress
                         }
-                        defer {
+                        do {
+                            try await ngTranscribeVoiceMessage(
+                                context: context,
+                                message: message
+                            )
                             updateStateAndLayout {
                                 self.audioTranscriptionState = .expanded
                             }
+                        } catch {
+                            updateStateAndLayout {
+                                self.audioTranscriptionState = .collapsed
+                            }
                         }
-                        
-                        try await ngConvertSpeechToText(
-                            context: context,
-                            navigationController: arguments.controllerInteraction.navigationController(),
-                            message: message
-                        )
                     }
                 }
                 //
@@ -818,15 +820,11 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                     }
                     
-                    // Nicegram Speech2Text
-                    if #available(iOS 13.0, *) {
-                        let getSpeechToTextConfigUseCase = SpeechToTextContainer.shared.getSpeechToTextConfigUseCase()
-                        let alwaysShowButton = getSpeechToTextConfigUseCase().alwaysShowButton
-                        
-                        if alwaysShowButton {
-                            displayTranscribe = true
-                        }
-                    }
+                    // Nicegram Transcription
+                    // Nicegram pays for transcription with AI tokens rather than
+                    // Telegram Premium, so the button is offered on every voice
+                    // message regardless of upstream's own conditions above.
+                    displayTranscribe = true
                     //
                 }
                 
@@ -834,7 +832,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 switch audioTranscriptionState {
                 case .inProgress:
-                    // Nicegram Speech2Text (line changed)
+                    // Nicegram Transcription (line changed)
                     if case .success(_, _) = transcribedText {
                         updatedAudioTranscriptionState = .expanded
                     }
@@ -2192,7 +2190,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    // Nicegram NCG-6326 Apple Speech2Text
+    // Nicegram Transcription
     private func isLongMedia(_ limit: Double = 2 * 60) -> Bool {
         let duration = message?.media.compactMap({ $0 as? TelegramMediaFile }).first(where: { $0.isVoice })?.duration ?? 0
         

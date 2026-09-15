@@ -69,6 +69,14 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 
 
+### resolve_config
+
+```sh
+[bundle exec] fastlane resolve_config
+```
+
+
+
 ### compile_check
 
 ```sh
@@ -145,14 +153,6 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 ```sh
 [bundle exec] fastlane delete_keychain_if_exists
-```
-
-
-
-### log
-
-```sh
-[bundle exec] fastlane log
 ```
 
 

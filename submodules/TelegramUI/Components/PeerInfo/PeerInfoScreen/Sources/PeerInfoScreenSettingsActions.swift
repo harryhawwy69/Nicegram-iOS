@@ -1,5 +1,6 @@
 // Nicegram
 import FeatPaywall
+import NGCore
 import NGData
 import NGUI
 import NGUtils
@@ -346,12 +347,12 @@ extension PeerInfoScreenNode {
     
     // Nicegram, support URLs
     private func openNicegramSupportBot() {
-        let nicegramSupportBotUrl = ResolvedUrl.externalUrl("https://t.me/NicegramHelperBot")
+        let nicegramSupportBotUrl = ResolvedUrl.externalUrl(NGCore.links.helperBot.absoluteString)
         openURL(nicegramSupportBotUrl)
     }
     
     private func openNicegramFaq() {
-        let nicegramFAQUrl = ResolvedUrl.externalUrl("https://nicegram.app/faq")
+        let nicegramFAQUrl = ResolvedUrl.externalUrl(NGCore.links.faq.absoluteString)
         openURL(nicegramFAQUrl)
     }
     

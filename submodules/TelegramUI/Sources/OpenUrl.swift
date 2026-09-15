@@ -1,6 +1,5 @@
 // Nicegram Deeplink
 import NGCore
-import NicegramWallet
 import SafariServices
 //
 import Foundation
@@ -381,46 +380,18 @@ private func makeTelegramUrl(_ path: String, queryItems: [URLQueryItem] = []) ->
     return appendQueryItems(to: "https://t.me\(path)", items: queryItems)
 }
 
-// Nicegram Deeplink
-private func extractNicegramDeeplink(from link: String) -> String? {
-    guard let url = URL(string: link) else {
-        return nil
-    }
-    
-    // Universal link
-    if url.scheme == "https",
-       url.host == "nicegram.app",
-       url.path == "/deeplink" {
-        return url.queryItems["url"]
-    }
-    
-    // Deeplink
-    if url.scheme == "ncg",
-       url.host == "deeplink" {
-        return url.queryItems["url"]
-    }
-    
-    return nil
-}
-//
-
 // Nicegram, skipNicegramProcessing added
 func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, skipNicegramProcessing: Bool = false, dismissInput: @escaping () -> Void) {
     // Nicegram
     if !skipNicegramProcessing {
         let url = NGCore.UrlUtils.normalizeNicegramDeeplink(url)
         
-        if let nicegramDeeplink = extractNicegramDeeplink(from: url) {
+        if let nicegramDeeplink = NGCore.UrlUtils.extractNicegramDeeplink(from: url) {
             openExternalUrlImpl(context: context, urlContext: urlContext, url: nicegramDeeplink, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: dismissInput)
             return
         }
         
         Task { @MainActor in
-            let walletDeeplinksManager = NicegramWallet.DeeplinksModule.shared.deeplinksManager()
-            if walletDeeplinksManager.handle(url) {
-                return
-            }
-            
             let nicegramHandler = NGDeeplinkHandler(
                 tgAccountContext: context,
                 navigationController: navigationController
@@ -1128,7 +1099,7 @@ private func showUpdateAppAlert() {
             handler: { _ in
                 Task { @MainActor in
                     let urlOpener = CoreContainer.shared.urlOpener()
-                    urlOpener.open(NicegramUrls.appStore)
+                    urlOpener.open(NGCore.links.appStore)
                 }
             }
         )

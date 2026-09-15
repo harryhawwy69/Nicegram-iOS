@@ -5,8 +5,9 @@ NGDEPS = [
     "//Nicegram/NGTelegramIntegration:NGTelegramIntegration",
     "//Nicegram/NGTranslate:NGTranslate",
     "//Nicegram/NGUI:NGUI",
-    "//Nicegram/NGSpeechToText:NGSpeechToText",
+    "//Nicegram/NGUtils:NGUtils",
     "@swiftpkg_nicegram_assistant_ios//:FeatPaywall",
+    "@swiftpkg_nicegram_assistant_ios//:FeatTranscription",
 ]
 
 swift_library(

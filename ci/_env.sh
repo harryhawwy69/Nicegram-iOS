@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # Sources the untracked ci/fastlane-env.sh that holds this machine's
 # credentials (API keys, signing secrets, TELEGRAM_CODESIGNING_GIT_PASSWORD),
@@ -70,3 +71,19 @@ unset _ng_main_env
 # root -- both land on the worktree root, and a bogus pre-exported
 # SOURCE_PATH is overridden either way.
 SOURCE_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; export SOURCE_PATH
+
+# Same reasoning, one step weaker. The Fastfile reads BUILD_WORKING_DIR with no
+# fallback of its own -- `resolve_telegram_configuration` writes
+# telegram-configuration.json there and `build_bazel` puts the IPA and dSYMs
+# under it -- so a tracked file should not depend entirely on a teammate's
+# untracked fastlane-env.sh happening to export it. Unset, those lanes write to
+# the filesystem root. (The ci/ shell wrappers no longer need it at all: they
+# keep their per-run scratch under $TMPDIR and delete it on the way out.)
+#
+# A default, not an override like SOURCE_PATH above: CI genuinely points this
+# somewhere else (`BUILD_WORKING_DIR: /Users/telegram/build-working-dir` in
+# .github/workflows/*.yml), and while CI invokes fastlane lanes directly and
+# never sources this file, overriding a value someone deliberately set would be
+# the wrong shape of guarantee. The value below is exactly what
+# ci/fastlane-env.sh sets, and ci/working_dir is gitignored.
+: "${BUILD_WORKING_DIR:=$SOURCE_PATH/ci/working_dir}"; export BUILD_WORKING_DIR

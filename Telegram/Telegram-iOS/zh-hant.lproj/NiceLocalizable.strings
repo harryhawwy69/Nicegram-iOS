@@ -1,8 +1,5 @@
 "AppName" = "Nicegram";
 
-"ViewAuditReport" = "查看CertiK報告";
-"Wallet" = "錢包";
-
 /*Common*/
 "Nicegram.PrivacyPolicy" = "隱私權政策";
 "Nicegram.EULA" = "授權條款";
@@ -84,7 +81,6 @@
 "Folder.DeleteAsk" = "刪除資料夾";
 "Folder.NeedPremium" = "這個資料夾是進階版功能。您可以透過刷卡來升級，或是刪除一些對話夾。";
 "Common.SupportChatUsername" = "nicegram_tw";
-"Common.FAQUrl" = "https://nicegram-tw.gitbook.io/";
 "Common.FAQ.Button" = "Nicegram 常見問題";
 "IAP.Premium.Title" = "進階版功能";
 "IAP.Premium.Subtitle" = "您無法抗拒的獨特功能！";

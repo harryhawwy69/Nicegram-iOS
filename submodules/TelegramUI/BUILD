@@ -29,6 +29,7 @@ NGDEPS = [
     "@swiftpkg_nicegram_assistant_ios//:FeatTgChatButton",
     "@swiftpkg_nicegram_assistant_ios//:FeatWhitebridge",
     "@swiftpkg_nicegram_assistant_ios//:NGEntryPoint",
+    "//Nicegram/NGWebDomains:NGWebDomains",
 ]
 
 load(

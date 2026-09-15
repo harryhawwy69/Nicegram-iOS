@@ -101,7 +101,9 @@ tools/sim-watcher/dist/
 # Nicegram: track shared Claude Code rules
 !/.claude/
 /.claude/*
+!/.claude/reference/
 !/.claude/rules/
+!/.claude/scripts/
 !/.claude/settings.json
 !/.claude/skills/
 
@@ -116,3 +118,4 @@ tools/sim-watcher/dist/
 # real directory of Bazel patch files, not a convenience symlink.
 !/bazel-patches
 .mcp.json
+.l10n-config.json

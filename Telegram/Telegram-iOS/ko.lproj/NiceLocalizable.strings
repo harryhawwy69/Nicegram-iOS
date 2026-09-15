@@ -1,8 +1,5 @@
 "AppName" = "Nicegram";
 
-"ViewAuditReport" = "CertiK 보고서 보기";
-"Wallet" = "지갑";
-
 /*Common*/
 "Nicegram.PrivacyPolicy" = "개인 정보 보호정책";
 "Nicegram.EULA" = "EULA";
@@ -84,7 +81,6 @@
 "Folder.DeleteAsk" = "폴더 삭제";
 "Folder.NeedPremium" = "이 폴더는 프리미엄 에서만 사용할 수 있습니다. 옆으로 밀어서 프리미엄을 받거나 폴더를 삭제할 수 있습니다.";
 "Common.SupportChatUsername" = "nicegramchat";
-"Common.FAQUrl" = "https://nicegram.app/faq/";
 "Common.FAQ.Button" = "Nicegram FAQ";
 "IAP.Premium.Title" = "프리미엄";
 "IAP.Premium.Subtitle" = "지나칠 수 없는 독특한 기능!";

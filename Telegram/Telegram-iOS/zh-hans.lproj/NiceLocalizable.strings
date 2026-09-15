@@ -1,8 +1,5 @@
 "AppName" = "Nicegram";
 
-"ViewAuditReport" = "查看CertiK报告";
-"Wallet" = "钱包";
-
 /*Common*/
 "Nicegram.PrivacyPolicy" = "隐私政策";
 "Nicegram.EULA" = "EULA";
@@ -84,7 +81,6 @@
 "Folder.DeleteAsk" = "删除分组";
 "Folder.NeedPremium" = "此文件夹仅限 Premium 可用。您可以解锁 Premium 来使用，或删除此文件夹。";
 "Common.SupportChatUsername" = "nicegram_cn";
-"Common.FAQUrl" = "https://nicegram.app/cn/faq/";
 "Common.FAQ.Button" = "Nicegram 常见问题";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "您无法拒绝的独特功能！";

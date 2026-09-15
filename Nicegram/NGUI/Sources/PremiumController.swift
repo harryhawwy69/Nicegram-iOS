@@ -7,7 +7,6 @@
 //
 
 import Display
-import FeatSpeechToText
 import Foundation
 import SwiftSignalKit
 import Postbox
@@ -398,7 +397,6 @@ public func premiumController(context: AccountContext) -> ViewController {
 //            ])])
 //        presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, testAction: {
-//        presentControllerImpl?(WebController(url: URL(string: "https://nicegram.app/")!), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
 
 //        let msg = "- 儒家 \n\n> - Dota"
 //        let _ = (getRegDate(context.account.peerId.toInt64(), owner: context.account.peerId.toInt64())  |> deliverOnMainQueue).start(next: { response in

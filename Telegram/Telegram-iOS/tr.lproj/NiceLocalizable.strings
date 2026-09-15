@@ -1,8 +1,5 @@
 "AppName" = "Nicegram";
 
-"ViewAuditReport" = "CertiK Raporunu Görüntüle";
-"Wallet" = "Cüzdan";
-
 /*Common*/
 "Nicegram.PrivacyPolicy" = "Gizlilik politikası";
 "Nicegram.EULA" = "EULA";
@@ -84,7 +81,6 @@
 "Folder.DeleteAsk" = "Klasörü Sil";
 "Folder.NeedPremium" = "Bu klasör sadece Premium ile kullanılabilir. Premium’u alabilir ya da kaydırarak klasörü silebilirsiniz.";
 "Common.SupportChatUsername" = "nicegram_tr";
-"Common.FAQUrl" = "https://nicegram.app/tr/faq/";
 "Common.FAQ.Button" = "Nicegram SSS";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Reddedemeyeceğiniz benzersiz özellikler!";

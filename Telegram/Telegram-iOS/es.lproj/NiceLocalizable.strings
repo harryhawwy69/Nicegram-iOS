@@ -1,8 +1,5 @@
 "AppName" = "Nicegram";
 
-"ViewAuditReport" = "Ver informe de CertiK";
-"Wallet" = "Billetera";
-
 /*Common*/
 "Nicegram.PrivacyPolicy" = "Política de privacidad";
 "Nicegram.EULA" = "CLUF";
@@ -84,7 +81,6 @@
 "Folder.DeleteAsk" = "Eliminar carpeta";
 "Folder.NeedPremium" = "Esta carpeta solo está disponible con Premium. Puedes comprar Premium o eliminar la carpeta con el gesto de deslizar.";
 "Common.SupportChatUsername" = "nicegram_es";
-"Common.FAQUrl" = "https://nicegram.app/faq/";
 "Common.FAQ.Button" = "Preguntas frecuentes de Nicegram";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "¡Características únicas que no puedes rechazar!";

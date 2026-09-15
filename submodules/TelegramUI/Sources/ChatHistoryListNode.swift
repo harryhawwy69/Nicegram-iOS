@@ -1,5 +1,4 @@
 // Nicegram
-import ChatMessageNicegramWalletTxNode
 import NGAiChatUI
 import NGData
 //
@@ -238,22 +237,11 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
             case let .MessageEntry(message, presentationData, read, location, selection, attributes):
-                // Nicegram, changed to 'var'
-                var item: ListViewItem
+                let item: ListViewItem
                 switch mode {
                     case .bubbles:
                         // Nicegram, wantTrButton
                         item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders || message.timestamp < 10, wantTrButton: wantTrButton)
-                    
-                        // Nicegram Wallet
-                        if #available(iOS 16.0, *), let tx = attributes.walletTx {
-                            item = ChatMessageNicegramWalletTxItem(
-                                controllerInteraction: controllerInteraction,
-                                incoming: message.flags.contains(.Incoming),
-                                presentationData: presentationData,
-                                tx: tx
-                            )
-                        }
                     case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch, _):
                         let displayHeader: Bool
                         switch displayHeaders {
@@ -306,23 +294,11 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
             case let .MessageEntry(message, presentationData, read, location, selection, attributes):
-                // Nicegram, changed to 'var'
-                var item: ListViewItem
+                let item: ListViewItem
                 switch mode {
                     case .bubbles:
                         // Nicegram, wantTrButton
                         item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders || message.timestamp < 10, wantTrButton: wantTrButton)
-                    
-                        // Nicegram Wallet
-                        if #available(iOS 16.0, *), let tx = attributes.walletTx {
-                            item = ChatMessageNicegramWalletTxItem(
-                                controllerInteraction: controllerInteraction,
-                                incoming: message.flags.contains(.Incoming),
-                                presentationData: presentationData,
-                                tx: tx
-                            )
-                        }
-                        //
                     case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch, _):
                         let displayHeader: Bool
                         switch displayHeaders {
@@ -2269,8 +2245,7 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                 }
                                 
                 let previousChatHistoryEntriesForViewState = chatHistoryEntriesForViewState.with({ $0 })
-                // Nicegram ATT, changed 'let' to 'var'
-                var (filteredEntries, updatedChatHistoryEntriesForViewState) = chatHistoryEntriesForView(
+                let (filteredEntries, updatedChatHistoryEntriesForViewState) = chatHistoryEntriesForView(
                     currentState: previousChatHistoryEntriesForViewState,
                     context: context,
                     location: chatLocation,
@@ -2299,12 +2274,6 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
                     isMusicPlaylist: isMusicPlaylist,
                     pinToTopStableId: pinToTopStableId
                 )
-                // Nicegram
-                filteredEntries = nicegramMapChatHistoryEntries(
-                    entries: filteredEntries
-                )
-                //
-                
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
                 let processedView = ChatHistoryView(originalView: view, filteredEntries: filteredEntries, associatedData: associatedData, lastHeaderId: lastHeaderId, id: id, locationInput: update.2, ignoreMessagesInTimestampRange: update.3, ignoreMessageIds: update.4)
                 let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages, allAdMessages.version))

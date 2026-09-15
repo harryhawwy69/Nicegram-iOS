@@ -10,7 +10,6 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "@swiftpkg_nicegram_assistant_ios//:FeatSpeechToText",
         "@swiftpkg_nicegram_assistant_ios//:NGCore",
         "//submodules/AccountContext:AccountContext",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",

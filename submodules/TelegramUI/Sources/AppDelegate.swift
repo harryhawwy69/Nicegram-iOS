@@ -14,7 +14,7 @@ import NGLogging
 import NGRepoUser
 import NGStrings
 import NGUtils
-import NicegramWallet
+import NGWebDomains
 //
 import UIKit
 import SwiftSignalKit
@@ -437,10 +437,12 @@ private class UserInterfaceStyleObserverWindow: UIWindow {
                 isAppStoreBuild: buildConfig.isAppStoreBuild,
                 isProd: NGENV.is_prod,
                 premiumProductId: NGENV.premium_bundle,
-                privacyUrl: URL(string: "https://nicegram.app/privacy-policy")!,
                 referralBot: NGENV.referral_bot,
                 telegramAuthBot: NGENV.telegram_auth_bot,
-                termsUrl: URL(string: "https://nicegram.app/terms-of-use")!,
+                webDomains: WebDomains(
+                    all: NicegramWebDomains.all,
+                    primary: NicegramWebDomains.primary
+                ),
                 webSocketUrl: NGENV.websocket_url
             ),
             accountBackupBridge: {
@@ -469,6 +471,9 @@ private class UserInterfaceStyleObserverWindow: UIWindow {
             },
             telegramChatInviteChecker: {
                 TelegramChatInviteCheckerImpl(contextProvider: contextProvider)
+            },
+            telegramContactsProvider: {
+                TelegramContactsProviderImpl(contextProvider: contextProvider)
             },
             telegramIdProvider: {
                 TelegramIdProviderImpl(contextProvider: contextProvider)
@@ -506,9 +511,6 @@ private class UserInterfaceStyleObserverWindow: UIWindow {
             telegramTokenLoginHandler: {
                 TelegramTokenLoginHandlerImpl(sharedContextProvider: sharedContextProvider)
             },
-            telegramWebAppOpener: {
-                TelegramWebAppOpenerImpl(contextProvider: contextProvider)
-            },
             userMessagesHistoryProvider: {
                 UserMessagesHistoryProviderImpl(contextProvider: contextProvider)
             },
@@ -528,31 +530,7 @@ private class UserInterfaceStyleObserverWindow: UIWindow {
                         )
                     }
                 )
-            },
-            walletData: .init(
-                env: {
-                    .init(
-                        appUniversalLinkDomain: NGCore.UrlUtils.ASSOCIATED_DOMAIN,
-                        appUrlScheme: buildConfig.appSpecificUrlScheme,
-                        enableLogging: ngEnableLogging,
-                        keychainGroupIdentifier: NGENV.wallet.keychainGroupIdentifier,
-                        nicegramApiBaseUrl: URL(string: NGENV.ng_api_url)!
-                            .appendingPathComponent("v7/"),
-                        walletConnectProjectId: NGENV.wallet.walletConnectProjectId,
-                        web3AuthBackupQuestion: NGENV.wallet.web3AuthBackupQuestion,
-                        web3AuthClientId: NGENV.wallet.web3AuthClientId,
-                        web3AuthVerifier: NGENV.wallet.web3AuthVerifier,
-                        stonfiApiUrl: NGENV.wallet.stonfiApiUrl,
-                        stonfiNicegramApiUrl: NGENV.wallet.stonfiNicegramApiUrl
-                    )
-                },
-                telegramContactsProvider: {
-                    TelegramContactsProviderImpl(contextProvider: contextProvider)
-                },
-                walletVerificationInterceptor: {
-                    WalletVerificationInterceptorImpl(sharedContextProvider: sharedContextProvider)
-                }
-            )
+            }
         )
         accountManagerCallbacks = AccountManagerCallbacks(
             onRemoteLogout: { id in

@@ -1,8 +1,5 @@
 "AppName" = "Nicegram";
 
-"ViewAuditReport" = "Visualizza il rapporto CertiK";
-"Wallet" = "Portafoglio";
-
 /*Common*/
 "Nicegram.PrivacyPolicy" = "Informativa sulla privacy";
 "Nicegram.EULA" = "EULA";
@@ -85,7 +82,6 @@ Il browser selezionato deve essere installato.";
 "Folder.DeleteAsk" = "Cancella cartella";
 "Folder.NeedPremium" = "Questa cartella è disponibile solo con Premium. Ottieni Premium o dovrai cancellare la cartella con uno swipe.";
 "Common.SupportChatUsername" = "nicegram_it";
-"Common.FAQUrl" = "https://nicegram.app/it/faq/";
 "Common.FAQ.Button" = "FAQ Nicegram";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Feature uniche che non puoi rifiutare!";

@@ -1,8 +1,5 @@
 "AppName" = "Nicegram";
 
-"ViewAuditReport" = "Zobacz raport CertiK";
-"Wallet" = "Portfel";
-
 /*Common*/
 "Nicegram.PrivacyPolicy" = "Privacy policy ml";
 "Nicegram.EULA" = "EULA";
@@ -84,7 +81,6 @@
 "Folder.DeleteAsk" = "Usuń folder";
 "Folder.NeedPremium" = "Ten folder jest dostępny tylko w wersji Premium. Możesz pobrać wersję Premium lub usunąć folder za pomocą przesunięcia.";
 "Common.SupportChatUsername" = "nicegramchat";
-"Common.FAQUrl" = "https://nicegram.app/faq/";
 "Common.FAQ.Button" = "Nicegram FAQ";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Unikalne funkcje, których nie można odmówić!";

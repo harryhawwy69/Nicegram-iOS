@@ -43,6 +43,9 @@ load("//build-system/bazel-utils:plist_fragment.bzl",
     "plist_fragment",
 )
 
+# Nicegram Domain, single source of truth for our web domains
+load("//Nicegram/NGWebDomains:web_domains.bzl", "NICEGRAM_ALL_DOMAINS")
+
 load(
     "@build_configuration//:variables.bzl",
     "telegram_bazel_path",
@@ -545,18 +548,25 @@ icloud_fragment = "" if not telegram_enable_icloud else """
     telegram_icloud_environment="Production" if telegram_aps_environment == "production" else "Development"
 )
 
+# Nicegram Domain, generated from NICEGRAM_ALL_DOMAINS. An upstream merge that
+# rewrites this block must keep the interpolation, not restore literal entries.
+nicegram_applinks_fragment = "\n".join([
+    "    <string>applinks:{}</string>".format(domain)
+    for domain in NICEGRAM_ALL_DOMAINS
+])
+
 associated_domains_fragment = "" if telegram_bundle_id not in nicegram_bundle_ids else """
 <key>com.apple.developer.associated-domains</key>
 <array>
     <string>applinks:telegram.me</string>
     <string>applinks:t.me</string>
-    <string>applinks:nicegram.app</string>
+{nicegram_applinks}
     <string>applinks:yfqcuhfv.xyz</string>
     <string>applinks:*.t.me</string>
     <string>webcredentials:t.me</string>
     <string>webcredentials:telegram.org</string>
 </array>
-"""
+""".format(nicegram_applinks = nicegram_applinks_fragment)
 
 siri_fragment = "" if not telegram_enable_siri else """
 <key>com.apple.developer.siri</key>
@@ -607,17 +617,6 @@ official_background_gpu_fragment = """
 """
 background_gpu_fragment = official_background_gpu_fragment if telegram_bundle_id == "ph.telegra.Telegraph" else ""
 
-# Nicegram, keychain_access_groups_fragment
-keychain_access_groups_fragment = """
-    <key>keychain-access-groups</key>
-    <array>
-        <string>{telegram_team_id}.{telegram_bundle_id}</string>
-    </array>
-""".format(
-    telegram_team_id=telegram_team_id,
-    telegram_bundle_id=telegram_bundle_id
-)
-
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -634,8 +633,6 @@ plist_fragment(
         notification_filtering_fragment,
         signin_fragment,
         background_gpu_fragment,
-        # Nicegram, keychain_access_groups_fragment
-        keychain_access_groups_fragment
     ])
 )
 

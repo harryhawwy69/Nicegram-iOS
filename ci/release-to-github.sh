@@ -1,3 +1,4 @@
+#!/bin/bash
 if [ "$1" = "" ] || [ "$2" != "" ]
 then
   echo "You must pass one argument reflecting the version and build number"

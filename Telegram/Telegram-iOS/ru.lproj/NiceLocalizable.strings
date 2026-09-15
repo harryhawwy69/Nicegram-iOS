@@ -1,8 +1,5 @@
 "AppName" = "Nicegram";
 
-"ViewAuditReport" = "Просмотреть отчет CertiK";
-"Wallet" = "Кошелек";
-
 /*Common*/
 "Nicegram.PrivacyPolicy" = "Политика конфиденциальности Nicegram";
 "Nicegram.EULA" = "Пользовательское соглашение Nicegram";
@@ -84,7 +81,6 @@
 "Folder.DeleteAsk" = "Удалить папку";
 "Folder.NeedPremium" = "Эта Папка доступна только с Премиумом. Вы можете получить Премиум или удалить папку свайпом.";
 "Common.SupportChatUsername" = "nicegram_ru";
-"Common.FAQUrl" = "https://nicegram.app/ru/faq/";
 "Common.FAQ.Button" = "Вопросы о Nicegram";
 "IAP.Premium.Title" = "Premium";
 "IAP.Premium.Subtitle" = "Уникальные функции, от которых трудно отказаться!";

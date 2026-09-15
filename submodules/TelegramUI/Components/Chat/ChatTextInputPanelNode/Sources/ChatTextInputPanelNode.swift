@@ -3883,7 +3883,24 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         //
 
         // Nicegram AI Reply
-        let aiReplyButtonFrame = attachmentButtonFrame.offsetBy(dx: 0.0, dy: -(attachmentButtonFrame.height + 6.0))
+        // Pinned to a fixed 40x40 and anchored to the TOP of the attachment capsule.
+        // Do NOT derive the size or the offset from `attachmentButtonFrame`: at 12.8 that
+        // frame was a fixed 40x40, but 12.9.2 turned it into a pill whose height becomes
+        // `threeLineHeight` once the input grows, to fit upstream's own AI button in its top
+        // slot. Inheriting it stretched this button vertically, made `height * 0.5` exceed
+        // half the width so the corners clipped, and let the gap grow with the text.
+        // This keeps the 12.8 geometry exactly: with a 40-tall capsule the origin is
+        // `textInputFrame.maxY - 86` either way, and when the capsule grows the button now
+        // rides above it with the gap still fixed.
+        let aiReplyButtonSide: CGFloat = 40.0
+        let aiReplyButtonSpacing: CGFloat = 6.0
+        let aiReplyButtonFrame = CGRect(
+            origin: CGPoint(
+                x: attachmentButtonFrame.minX,
+                y: attachmentButtonFrame.minY - aiReplyButtonSpacing - aiReplyButtonSide
+            ),
+            size: CGSize(width: aiReplyButtonSide, height: aiReplyButtonSide)
+        )
         transition.updateFrame(layer: self.aiReplyButtonContainer.layer, frame: aiReplyButtonFrame)
 
         let aiReplyLocalFrame = CGRect(origin: .zero, size: aiReplyButtonFrame.size)
