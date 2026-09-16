@@ -1,4 +1,6 @@
 // Nicegram
+import FeatAiShortcuts
+import FeatChatBanner
 import NGAiChatUI
 import NGData
 //
@@ -490,7 +492,12 @@ private var nextClientId: Int32 = 1
 
 public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, ChatHistoryListNode {
     static let fixedAdMessageStableId: UInt32 = UInt32.max - 5000
-    
+
+    // Nicegram ChatBanner
+    let aiShortcutsViewModel: AiShortcutsViewModel?
+    let chatBannerViewModel: BannerViewModel?
+    //
+
     // Nicegram
     let nicegramContext: ChatNicegramContext?
     //
@@ -805,6 +812,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         // Nicegram
         nicegramContext: ChatNicegramContext? = nil,
         //
+        // Nicegram ChatBanner
+        aiShortcutsViewModel: AiShortcutsViewModel? = nil,
+        chatBannerViewModel: BannerViewModel? = nil,
+        //
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>),
         systemStyle: ItemListSystemStyle = .legacy,
@@ -833,6 +844,10 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         
         // Nicegram
         self.nicegramContext = nicegramContext
+        // Nicegram ChatBanner
+        self.aiShortcutsViewModel = aiShortcutsViewModel
+        self.chatBannerViewModel = chatBannerViewModel
+        //
         //
         self.context = context
         self.systemStyle = systemStyle
@@ -4697,6 +4712,16 @@ public final class ChatHistoryListNodeImpl: ASDisplayNode, ChatHistoryNode, Chat
         if #available(iOS 15.0, *), NGSettings.showNicegramButtonInChat {
             additionalBotInset = max(additionalBotInset, 44)
         }
+        // Nicegram ChatBanner
+        // The banner and the AI shortcuts panel stack, so their heights add:
+        // when both are up the banner is pushed above the panel, and reserving
+        // only the taller of the two would leave the banner over a message.
+        var ngFloatingHeight = chatBannerViewModel?.viewState.height ?? 0
+        if aiShortcutsViewModel?.viewState.isVisible == true {
+            ngFloatingHeight += AiShortcutsConstants.height
+        }
+        additionalBotInset = max(additionalBotInset, ngFloatingHeight)
+        //
         insets.top += additionalBotInset
         let updateSizeAndInsets = updateSizeAndInsets.with(insets: insets)
         //

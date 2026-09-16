@@ -610,6 +610,7 @@ one owned by a single skill and producing a fixed set of artifacts:
 | bug round | `fix-qa-bugs` | fix commits on the feature branch, a change-record delta, bug linked and → DEV COMPLETED |
 | land | `merge-to-develop` | squash on develop in both repos, the change record re-posted at the freeze point, branches and worktree removed |
 | upstream | `tg-merge` | its own branch + worktree, and a `docs/changes` record it writes but does not deliver |
+| crashes | `triage-crashes` → `diagnose-crash` | records in `docs/crashes/`; an approved fix then enters this table at "start" |
 
 Ship to QA and bug round form a loop, not a line: a build surfaces bugs, a bug
 round fixes them, the next build ships the fixes, and QA may bounce it back
@@ -628,6 +629,35 @@ the key on the change record's own `Tickets:` line. Only after that build does
 `merge-to-develop` land it. Handing `tg-merge` straight to `merge-to-develop`
 would route around the only skill that delivers the change record, leaving it
 written and unread.
+
+## Crashes
+
+Production crashes are triaged through two skills and one registry, so that the
+analysis accumulates instead of being redone. `triage-crashes` runs a round —
+verify what we shipped, pick the live version, rank and triage its top crashes;
+`diagnose-crash` takes one crash in its own session and finds the root cause.
+Several diagnoses run in parallel.
+
+**`docs/crashes/` is the single source of truth** — one markdown file per
+Crashlytics issue, keyed by issue id, with a flat frontmatter header over mostly
+prose. `README.md` there is generated and must never be hand-edited; on a
+conflict, discard both sides and regenerate. The tree is stripped from the
+public mirror.
+
+**A diagnosis never writes app code.** It reports, drafts a patch, and stops for
+a human decision. An approved fix is an ordinary feature via `start-feature`,
+one per crash — which is why the lifecycle table above has a row for this. Two
+rules bind every diagnosis: never remove a `fatalError` or `assert` to make a
+crash go away (that trades a visible crash for silent data corruption), and
+"upstream race — do not touch it" counts as a successful diagnosis, because a
+session under pressure to produce a patch will patch someone else's engine on a
+theory.
+
+The status chain has one owner per transition: `triage-crashes` opens a record,
+`diagnose-crash` decides it, a fix feature's **first** plan task sets `fixing`,
+`merge-to-develop` sets `shipped` when it lands, and the next round's verify
+pass closes it as `verified` or reopens it as `regressed`. `tg-merge` also reads
+the registry, reporting where an upstream change touches an open crash's files.
 
 ## Cross-repo feature workflow
 
@@ -792,6 +822,11 @@ main clone's copy automatically — see "Build" above. No manual sourcing needed
     wrong base silently produces a plausible merge against the wrong upstream.
     Both this file and `docs/tg-merge/reports/` are stripped from the public
     mirror by `bitbucket-pipelines.yml`.
+  - `bitbucket-pipelines.yml`'s strip lists — `docs/crashes` must stay in
+    **both** of them (the `rm -rf` and the staged-path guard), exactly like the
+    four trees beside it. `ci/tests/test-mirror-strip.sh` catches a tree dropped
+    from one list but not a tree dropped from both, which is what an upstream
+    merge that rewrites this file would do.
 
 ### Building for QA
 
@@ -808,10 +843,11 @@ The script pushes the current host branch, then triggers the Bitbucket
 An assistant commit that exists only locally fails at that checkout, so both
 preconditions are about making the SHA fetchable — not about merging.
 
-The mirror step also strips four trees before pushing — `.claude/`,
-`docs/superpowers/`, `docs/tg-merge/` and `docs/changes/` — so fork-internal
-tooling, process docs, the upstream-merge state and the change records never
-reach the public GitHub repo; all four stay fully tracked in Bitbucket. Keep
+The mirror step also strips five trees before pushing — `.claude/`,
+`docs/superpowers/`, `docs/tg-merge/`, `docs/changes/` and `docs/crashes/` — so
+fork-internal tooling, process docs, the upstream-merge state, the change
+records and the crash registry never reach the public GitHub repo; all five stay
+fully tracked in Bitbucket. Keep
 this list in step with `bitbucket-pipelines.yml`, which names each tree
 **twice**: once in the `rm -rf` and once in the staged-path assertion right
 after it. `ci/tests/test-mirror-strip.sh` asserts the two lists cannot drift
@@ -820,10 +856,11 @@ leaking quietly. It also asserts the old `docs/qa` name survives nowhere in
 that file, which is what covers the third mention — the comment explaining
 why the tree is stripped, which no list-parsing check can see.
 
-`docs/changes/` is stripped for the same reason as the rest, and it is the
-newest member: the first `build-to-testflight` run carrying a change record is
-exactly what would have published one. Change records describe gating and
-remote-config behaviour in terms only the team should read.
+`docs/changes/` is stripped for the same reason as the rest: change records
+describe gating and remote-config behaviour in terms only the team should read.
+`docs/crashes/` is the newest member — the crash registry states crash volumes,
+affected-user counts, and our written judgement that specific upstream Telegram
+bugs are abandoned, which reads differently in public than inside the team.
 
 This only stops **future** disclosure —
 `docs/superpowers/` predates this exclusion, so if the mirror was pushed while

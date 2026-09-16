@@ -18,6 +18,7 @@ NGDEPS = [
     "@swiftpkg_nicegram_assistant_ios//:FeatAiShortcuts",
     "@swiftpkg_nicegram_assistant_ios//:FeatAssistant",
     "@swiftpkg_nicegram_assistant_ios//:FeatAuth",
+    "@swiftpkg_nicegram_assistant_ios//:FeatChatBanner",
     "@swiftpkg_nicegram_assistant_ios//:FeatDockWidget",
     "@swiftpkg_nicegram_assistant_ios//:FeatGodsEye",
     "@swiftpkg_nicegram_assistant_ios//:FeatLaunchOverlays",
