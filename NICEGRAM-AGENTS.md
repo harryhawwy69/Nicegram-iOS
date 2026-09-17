@@ -603,7 +603,7 @@ one owned by a single skill and producing a fixed set of artifacts:
 
 | stage | skill | artifacts |
 |---|---|---|
-| start | `start-feature` | worktree + branch in both repos, spec, plan whose last task is the change record, ticket → IN PROGRESS |
+| start | `start-feature` | worktree + branch in both repos, change record stub, spec, plan whose last task completes the change record, ticket → IN PROGRESS |
 | implement | `superpowers:executing-plans` | code, `docs/changes/<date>-<slug>.md` |
 | refresh | `sync-from-develop` | merge commits in both repos |
 | ship to QA | `build-to-testflight` | `build/{N}`, a TestFlight build, a change-record comment on each ticket, tickets → READY FOR QA, a Confluence row |
@@ -992,7 +992,12 @@ writes it in.
 **Every feature plan ends with a change-record task.** The document is
 `docs/changes/YYYY-MM-DD-<slug>.md`, in English, following
 `docs/changes/TEMPLATE.md`, and it is written during implementation — not at
-planning time — because it describes what was actually built. It must carry a
+planning time — because it describes what was actually built. `start-feature`
+may already have created it as a stub when a ticket key was known, in which case
+the task **completes** that file rather than creating one; either way it ends
+with this feature's key in the `## Delivery` table's `pending` row, and with the
+template's instruction comment deleted — a record that still carries it halts
+the next build under halt (l). It must carry a
 `Tickets:` header line and meet the five obligations `start-feature` states in
 full: orientation, sufficiency for both another platform and the full test
 spectrum, reachability (the gates in evaluation order), known-and-intentional

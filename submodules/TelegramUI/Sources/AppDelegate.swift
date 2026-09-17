@@ -532,6 +532,8 @@ private class UserInterfaceStyleObserverWindow: UIWindow {
                 )
             }
         )
+        // Nicegram PostboxFailureReporting
+        setPostboxFailureReporter(sendPostboxFailureAnalytics)
         accountManagerCallbacks = AccountManagerCallbacks(
             onRemoteLogout: { id in
                 Task {
