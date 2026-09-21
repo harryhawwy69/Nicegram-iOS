@@ -309,6 +309,10 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openUniqueGift: (String) -> Void
     public let openMessageFeeException: () -> Void
     public let requestMessageUpdate: (EngineMessage.Id, Bool, ControlledTransition?) -> Void
+    /// Keeps bubble-level controls aligned with the same server editability rules as the context menu.
+    public let canEditMessage: (EngineRawMessage) -> Bool
+    /// Opens the regular edit composer for a message after rechecking editability at tap time.
+    public let beginEditMessage: (EngineMessage.Id) -> Void
     /// Synchronous editability predicate for rich-text checkbox toggling (bridges the
     /// internal `canEditMessage`, which the component module cannot call). Mirrors `canSetupReply`.
     public let canEditMessageRichText: (EngineRawMessage) -> Bool
@@ -509,6 +513,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         updateChatLocationThread: @escaping (Int64?, ChatControllerAnimateInnerChatSwitchDirection?) -> Void,
         requestToggleTodoMessageItem: @escaping (EngineMessage.Id, Int32, Bool) -> Void,
         displayTodoToggleUnavailable: @escaping (EngineMessage.Id) -> Void,
+        canEditMessage: @escaping (EngineRawMessage) -> Bool = { _ in false },
+        beginEditMessage: @escaping (EngineMessage.Id) -> Void = { _ in },
         canEditMessageRichText: @escaping (EngineRawMessage) -> Bool = { _ in false },
         toggleMessageRichTextCheckbox: @escaping (EngineMessage.Id, [Int], Bool) -> Void = { _, _, _ in },
         openStarsPurchase: @escaping (Int64?) -> Void,
@@ -635,6 +641,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openMessageFeeException = openMessageFeeException
         
         self.requestMessageUpdate = requestMessageUpdate
+        self.canEditMessage = canEditMessage
+        self.beginEditMessage = beginEditMessage
         self.canEditMessageRichText = canEditMessageRichText
         self.toggleMessageRichTextCheckbox = toggleMessageRichTextCheckbox
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures

@@ -141,7 +141,7 @@ rm -f "$OUT_ZIP"
 # Those entries survive into Telegram.app/Watch/ and hence into the IPA, where
 # `Frameworks/._TDLibFramework.framework` reads to Apple's validator as a nested
 # bundle carrying no signature. The upload is then rejected with
-#   90034: Missing or invalid signature. The bundle 'app.nicegram' at bundle path
+#   90034: Missing or invalid signature. The bundle 'app.wraithgram' at bundle path
 #          'Payload/Telegram.app' is not signed using an Apple submission certificate.
 # which names the HOST bundle and says nothing about the watch app or about
 # AppleDouble, so it is a genuinely misleading error to debug. Measured: the old

@@ -5817,6 +5817,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.present(controller, in: .current)
             }
+        }, canEditMessage: { [weak self] message in
+            guard let self else {
+                return false
+            }
+            return canEditMessage(context: self.context, limitsConfiguration: self.context.currentLimitsConfiguration.with { EngineConfiguration.Limits($0) }, message: message)
+        }, beginEditMessage: { [weak self] messageId in
+            guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId)?._asMessage() else {
+                return
+            }
+            guard canEditMessage(context: self.context, limitsConfiguration: self.context.currentLimitsConfiguration.with { EngineConfiguration.Limits($0) }, message: message) else {
+                return
+            }
+            self.interfaceInteraction?.setupEditMessage(messageId, { _ in })
         }, canEditMessageRichText: { [weak self] message in
             guard let self else {
                 return false
@@ -9088,9 +9101,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             if commit || !isScheduledMessages {
                 self.commitPurposefulAction()
+                let activatesWraithgramShutup = !isScheduledMessages && self.chatLocation.threadId == nil && messages.contains(where: { message in
+                    if case let .message(text, _, _, _, _, _, _, _, _, _) = message {
+                        return text.trimmingCharacters(in: .whitespacesAndNewlines) == ".shutup"
+                    } else {
+                        return false
+                    }
+                })
                 
                 let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone))
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                    if activatesWraithgramShutup, let self {
+                        let _ = activateWraithgramShutup(engine: self.context.engine, peerId: EnginePeer.Id(peerId)).startStandalone()
+                    }
                     if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }

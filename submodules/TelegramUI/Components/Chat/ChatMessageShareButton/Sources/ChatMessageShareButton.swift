@@ -107,7 +107,7 @@ public class ChatMessageShareButton: ASDisplayNode {
     }
     
     // Nicegram (translateButton)
-    public func update(presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: EngineMessage, accountPeerId: EnginePeer.Id, disableComments: Bool = false, isSummarize: Bool = false, translateButton: Bool = false) -> CGSize {
+    public func update(presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: EngineMessage, accountPeerId: EnginePeer.Id, disableComments: Bool = false, isSummarize: Bool = false, translateButton: Bool = false, editButton: Bool = false) -> CGSize {
         var isReplies = false
         var isNavigate = false
         var replyCount = 0
@@ -153,7 +153,9 @@ public class ChatMessageShareButton: ASDisplayNode {
             var updatedBottomIconImage: UIImage?
             var updatedIconOffset = CGPoint()
             // Nicegram  (if translateButton)
-            if translateButton {
+            if editButton {
+                updatedIconImage = PresentationResourcesChat.chatInputPanelEditIconImage(presentationData.theme.theme)
+            } else if translateButton {
                 updatedIconImage = PresentationResourcesChat.chatTranslateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if isSummarize {
                 if isExpand {

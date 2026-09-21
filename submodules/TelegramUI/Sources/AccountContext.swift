@@ -119,6 +119,7 @@ public final class AccountContextImpl: AccountContext {
     }
     public let account: Account
     public let engine: TelegramEngine
+    let wraithgramShutupManager: WraithgramShutupManager
     
     public let fetchManager: FetchManager
     public let prefetchManager: PrefetchManager?
@@ -279,7 +280,9 @@ public final class AccountContextImpl: AccountContext {
     {
         self.sharedContextImpl = sharedContext
         self.account = account
-        self.engine = TelegramEngine(account: account)
+        let engine = TelegramEngine(account: account)
+        self.engine = engine
+        self.wraithgramShutupManager = WraithgramShutupManager(account: account, engine: engine, isEnabled: sharedContext.applicationBindings.isMainApp && !temp)
         
         self.imageCache = DirectMediaImageCache(account: account)
         

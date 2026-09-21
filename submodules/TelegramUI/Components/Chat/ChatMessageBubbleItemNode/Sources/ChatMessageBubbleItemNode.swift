@@ -774,6 +774,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var summarizeButtonNode: ChatMessageShareButton?
     private var shareButtonNode: ChatMessageShareButton?
     private var trButtonNode: ChatMessageShareButton?
+    private var editButtonNode: ChatMessageShareButton?
     
     private let messageAccessibilityArea: AccessibilityAreaNode
 
@@ -1945,6 +1946,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         //
 
+        let needsEditButton = !isSidePanelOpen && item.controllerInteraction.canEditMessage(item.message)
+
         var needsShareButton = false
         var needsSummarizeButton = false
     
@@ -2060,14 +2063,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
-            if ((needsShareButton || needTrButton) && !isSidePanelOpen) || isAd {
+            if ((needsShareButton || needTrButton || needsEditButton) && !isSidePanelOpen) || isAd {
                 tmpWidth -= 45.0
             } else {
                 tmpWidth -= 3.0
             }
         } else {
             tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
-            if (((needsShareButton || needTrButton) && !isSidePanelOpen) || isAd) && tmpWidth + 32.0 > baseWidth {
+            if (((needsShareButton || needTrButton || needsEditButton) && !isSidePanelOpen) || isAd) && tmpWidth + 32.0 > baseWidth {
                 tmpWidth = baseWidth - 32.0
             }
         }
@@ -3898,6 +3901,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 needsSummarizeButton: needsSummarizeButton,
                 needsShareButton: needsShareButton,
                 needsTrButton: needTrButton,
+                needsEditButton: needsEditButton,
                 shareButtonOffset: shareButtonOffset,
                 avatarOffset: avatarOffset,
                 hidesHeaders: hidesHeaders,
@@ -3971,6 +3975,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         needsSummarizeButton: Bool,
         needsShareButton: Bool,
         needsTrButton: Bool,
+        needsEditButton: Bool,
         shareButtonOffset: CGPoint?,
         avatarOffset: CGFloat?,
         hidesHeaders: Bool,
@@ -5435,6 +5440,20 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             trButtonNode.removeFromSupernode()
         }
         //
+
+        if needsEditButton {
+            if strongSelf.editButtonNode == nil {
+                let editButtonNode = ChatMessageShareButton()
+                strongSelf.editButtonNode = editButtonNode
+                strongSelf.insertSubnode(editButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
+                editButtonNode.pressed = { [weak strongSelf] in
+                    strongSelf?.editButtonPressed()
+                }
+            }
+        } else if let editButtonNode = strongSelf.editButtonNode {
+            strongSelf.editButtonNode = nil
+            editButtonNode.removeFromSupernode()
+        }
         
         let offset: CGFloat = params.leftInset + (incoming ? 42.0 : 0.0)
         let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: params.width, height: layout.contentSize.height))
@@ -5693,6 +5712,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 trButtonNode.isHidden = (buttonFrame.origin.y < 0)
             }
             //
+            if let editButtonNode = strongSelf.editButtonNode {
+                let buttonSize = editButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId, disableComments: disablesComments, editButton: true)
+                var buttonFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX - buttonSize.width - 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                if let shareButtonOffset {
+                    buttonFrame.origin.y += shareButtonOffset.y - (buttonSize.height - 30.0)
+                } else if !disablesComments {
+                    buttonFrame.origin.y -= buttonSize.height - 30.0
+                }
+                buttonFrame.origin.y -= additionalTopOffsetForTranslateButton
+                animation.animator.updateFrame(layer: editButtonNode.layer, frame: buttonFrame, completion: nil)
+                animation.animator.updateAlpha(layer: editButtonNode.layer, alpha: isCurrentlyPlayingMedia ? 0.0 : 1.0, completion: nil)
+                editButtonNode.isHidden = buttonFrame.origin.y < 0
+            }
         } else {
             /*if let _ = strongSelf.backgroundFrameTransition {
                 strongSelf.animateFrameTransition(1.0, backgroundFrame.size.height)
@@ -5795,6 +5827,21 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 trButtonNode.isHidden = (buttonFrame.origin.y < 0)
             }
             //
+            if let editButtonNode = strongSelf.editButtonNode {
+                let buttonSize = editButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId, disableComments: disablesComments, editButton: true)
+                var buttonFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX - buttonSize.width - 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                if let shareButtonOffset {
+                    buttonFrame.origin.y += shareButtonOffset.y - (buttonSize.height - 30.0)
+                } else if !disablesComments {
+                    buttonFrame.origin.y -= buttonSize.height - 30.0
+                }
+                buttonFrame.origin.y -= additionalTopOffsetForTranslateButton
+                animation.animator.updatePosition(layer: editButtonNode.layer, position: buttonFrame.center, completion: nil)
+                animation.animator.updateBounds(layer: editButtonNode.layer, bounds: CGRect(origin: .zero, size: buttonFrame.size), completion: nil)
+                animation.animator.updateAlpha(layer: editButtonNode.layer, alpha: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.0 : 1.0, completion: nil)
+                animation.animator.updateScale(layer: editButtonNode.layer, scale: (isCurrentlyPlayingMedia || isSidePanelOpen) ? 0.001 : 1.0, completion: nil)
+                editButtonNode.isHidden = buttonFrame.origin.y < 0
+            }
             
             if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
                 legacyTransition.updateFrame(node: strongSelf.backgroundNode, frame: backgroundFrame)
@@ -7210,6 +7257,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if let item = self.item {
             item.controllerInteraction.displayQuickShare(item.message.id, node, gesture)
         }
+    }
+
+    private func editButtonPressed() {
+        guard let item = self.item, item.controllerInteraction.canEditMessage(item.message) else {
+            return
+        }
+        item.controllerInteraction.beginEditMessage(item.message.id)
     }
     
     @objc func trButtonPressed() {
