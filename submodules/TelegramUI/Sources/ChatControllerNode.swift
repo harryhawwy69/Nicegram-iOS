@@ -1021,26 +1021,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         //
         
-        // Nicegram Ads
-        // Nicegram SensitiveContentAccess
-        let ngHeaderAdViewModel = nicegramContext.ads.headerAdViewModel
-        let headerAdHeightPublisher = ngHeaderAdViewModel.$viewState
-            .map { [ngHeaderAdViewModel] state in
-                ngHeaderAdViewModel.viewHeight(state)
-            }
-        
-        restrictedChatSupplementViewModel.$viewState
-            .combineLatestThreadSafe(
-                headerAdHeightPublisher
-            )
-            .removeDuplicates(by: ==)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.requestLayout(.immediate)
-            }
-            .store(in: &cancellables)
-        //
-
         // Nicegram
         if #available(iOS 15.0, *) {
             nicegramOverlayView.openAiChat = { [weak self] in
@@ -1872,28 +1852,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 }
             }
         }
-        // Nicegram
-        self.nicegramContext.update(hasTelegramHeaderAd: displayAdPanel)
-
-        let ngHeaderAdViewModel = nicegramContext.ads.headerAdViewModel
-        let ngHeaderAdHeight = ngHeaderAdViewModel.viewHeight(ngHeaderAdViewModel.viewState)
-        let showNgHeaderAd = ngHeaderAdHeight > 0
-        if #available(iOS 16.0, *), showNgHeaderAd, !displayAdPanel {
-            headerPanels.append(
-                HeaderPanelContainerComponent.Panel(
-                    key: "nicegram-ad",
-                    orderIndex: 2,
-                    component: AnyComponent(
-                        NicegramChatHeaderAdComponent(
-                            viewModel: ngHeaderAdViewModel,
-                            height: ngHeaderAdHeight
-                        )
-                    )
-                )
-            )
-        }
-        //
-
+        // Nicegram Lean: the custom header-ad panel is intentionally omitted.
         if displayAdPanel, let adMessage = self.chatPresentationInterfaceState.adMessage {
             headerPanels.append(HeaderPanelContainerComponent.Panel(
                 key: "ad",

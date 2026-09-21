@@ -21,10 +21,20 @@ jobs:
         run: |
           ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
     
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
           fetch-depth: '0'
+
+      - name: Restore Bazel cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.BAZEL_LOCAL_CACHE }}
+            ${{ env.BAZEL_USER_ROOT }}/cache
+          key: ${{ runner.os }}-${{ runner.arch }}-bazel-${{ hashFiles('versions.json', 'MODULE.bazel', 'Package.resolved', 'ci/nicegram.bazelrc', 'ci/fastlane/Fastfile') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-bazel-
 
       - name: Set active Xcode path
         run: |
@@ -54,6 +64,7 @@ jobs:
       APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
       APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT }}
       BAZEL_REMOTE_CACHE: ${{ secrets.BAZEL_REMOTE_CACHE }}
+      BAZEL_LOCAL_CACHE: /Users/runner/work/nicegram-bazel-cache
       BAZEL_USER_ROOT: /private/var/tmp/_bazel_telegram
       BUILD_WORKING_DIR: /Users/telegram/build-working-dir
       BUNDLE_ID: app.nicegram

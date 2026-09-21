@@ -249,11 +249,11 @@ struct ScrolledToMessageId: Equatable {
 }
 
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {    
-    // Nicegram
+    // Nicegram Lean
     let nicegramContext: ChatNicegramContext
-    
-    var cancellables = Set<AnyCancellable>()
     //
+
+    var cancellables = Set<AnyCancellable>()
     
     var validLayout: ContainerViewLayout?
     
@@ -675,9 +675,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         initialTextInputState: ChatTextInputState? = nil,
         params: ChatControllerParams? = nil
     ) {
-        // Nicegram
+        // Nicegram Lean
         self.nicegramContext = ChatNicegramContext(accountContext: context)
         //
+
         self.initTimestamp = CFAbsoluteTimeGetCurrent()
         
         let _ = ChatControllerCount.modify { value in
@@ -6384,14 +6385,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return state
             }
         })
-        
-        // Nicegram
-        self.isVisiblePublisher
-            .sink { [weak self] isVisible in
-                self?.nicegramContext.update(isScreenVisible: isVisible)
-            }
-            .store(in: &cancellables)
-        //
         
         // Nicegram SensitiveContentAccess
         observeRestrictionInfo()

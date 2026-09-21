@@ -621,10 +621,6 @@ extension ChatControllerImpl {
             }
         }
         
-        // Nicegram
-        nicegramContext.update(peerView: contentData.state.peerView)
-        //
-        
         self.updatePreloadNextChatPeerId()
     }
     
