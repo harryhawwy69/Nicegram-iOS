@@ -339,22 +339,6 @@ filegroup(
     ]),
 )
 
-# Nicegram
-filegroup(
-    name = "GoogleService-Info",
-    srcs = glob([
-        "Telegram-iOS/GoogleService-Info.plist",
-    ]),
-)
-
-# Nicegram
-filegroup(
-    name = "FirebaseRemoteConfigDefaults",
-    srcs = glob([
-        "Telegram-iOS/FirebaseRemoteConfigDefaults.plist",
-    ], allow_empty=True),
-)
-
 filegroup(
     name = "LaunchScreen",
     srcs = glob([
@@ -371,8 +355,6 @@ objc_library(
 )
 
 NGRESOURCES = [
-    ":FirebaseRemoteConfigDefaults",
-    ":GoogleService-Info",
     "//Nicegram/NGResources:NGImagesAssets"
 ]
 
@@ -493,11 +475,11 @@ official_bundle_ids = [
 nicegram_bundle_ids = [
     "ph.telegra.Telegraph",
     "org.telegram.Telegram-iOS",
-    "app.nicegram",
+    "app.wraithgram",
 ]
 
 store_bundle_ids = [
-    "app.nicegram",
+    "app.wraithgram",
     "ph.telegra.Telegraph",
 ]
 
@@ -686,7 +668,7 @@ plist_fragment(
     template =
     """
     <key>CFBundleDisplayName</key>
-    <string>Nicegram</string>
+    <string>Wraithgram</string>
     """
 )
 
@@ -992,7 +974,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Share</string>
     <key>CFBundleName</key>
-    <string>Nicegram</string>
+    <string>Wraithgram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1084,7 +1066,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.NotificationContent</string>
     <key>CFBundleName</key>
-    <string>Nicegram</string>
+    <string>Wraithgram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1171,7 +1153,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.Widget</string>
     <key>CFBundleName</key>
-    <string>Nicegram</string>
+    <string>Wraithgram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1264,7 +1246,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.SiriIntents</string>
     <key>CFBundleName</key>
-    <string>Nicegram</string>
+    <string>Wraithgram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1449,7 +1431,7 @@ plist_fragment(
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}.NotificationService</string>
     <key>CFBundleName</key>
-    <string>Nicegram</string>
+    <string>Wraithgram</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>NSExtension</key>
@@ -1906,11 +1888,11 @@ plist_fragment(
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>Nicegram</string>
+    <string>Wraithgram</string>
     <key>CFBundleIdentifier</key>
     <string>{telegram_bundle_id}</string>
     <key>CFBundleName</key>
-    <string>Nicegram</string>
+    <string>Wraithgram</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>
@@ -1969,17 +1951,17 @@ plist_fragment(
     <key>NSCameraUsageDescription</key>
     <string>We need this so that you can take and share photos and videos.</string>
     <key>NSContactsUsageDescription</key>
-    <string>Nicegram stores your contacts heavily encrypted in the cloud to let you connect with your friends across all your devices.</string>
+    <string>Wraithgram stores your contacts heavily encrypted in the cloud to let you connect with your friends across all your devices.</string>
     <key>NSFaceIDUsageDescription</key>
     <string>You can use Face ID to unlock the app.</string>
     <key>NSLocationAlwaysUsageDescription</key>
-    <string>When you send your location to your friends, Nicegram needs access to show them a map. You also need this to send locations from an Apple Watch.</string>
+    <string>When you send your location to your friends, Wraithgram needs access to show them a map. You also need this to send locations from an Apple Watch.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>When you send your location to your friends, Nicegram needs access to show them a map.</string>
+    <string>When you send your location to your friends, Wraithgram needs access to show them a map.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>We need this so that you can record and share voice messages and videos with sound.</string>
     <key>NSMotionUsageDescription</key>
-    <string>When you send your location to your friends, Nicegram needs access to show them a map.</string>
+    <string>When you send your location to your friends, Wraithgram needs access to show them a map.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>We use access to your photo library so you can attach and send photos and videos from your device in chats.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -2077,7 +2059,7 @@ plist_fragment(
         <key>iCloud.{telegram_bundle_id}</key>
         <dict>
             <key>NSUbiquitousContainerName</key>
-            <string>Nicegram</string>
+            <string>Wraithgram</string>
             <key>NSUbiquitousContainerSupportedFolderLevels</key>
             <string>ANY</string>
         </dict>

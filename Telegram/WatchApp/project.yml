@@ -4,14 +4,14 @@
 # iOS Bazel build (apple_prebuilt_watchos_application) compiles with
 # `xcodebuild -configuration Release`. Differs from project.yml deliberately:
 #   - watchOS app target only (no watchapp2-container, no test/snapshot targets)
-#   - bundle id app.nicegram.watchkitapp, a companion of app.nicegram
+#   - bundle id app.wraithgram.watchkitapp, a companion of app.wraithgram
 #   - signing disabled here; the Bazel rule codesigns the output
 #   - no SnapshotPreviews (preview/test tooling must not ship)
 # Keep `packages`, `deploymentTarget`, sources and the Info.plist path in sync
 # with project.yml. Do NOT add the container target or SnapshotPreviews here.
 name: tgwatch
 options:
-  bundleIdPrefix: app.nicegram   # app.nicegram.watchkitapp, child of the main Nicegram app id
+  bundleIdPrefix: app.wraithgram   # app.wraithgram.watchkitapp, child of the main Wraithgram app id
   developmentLanguage: en
   deploymentTarget:
     watchOS: "26.0"
@@ -51,12 +51,12 @@ targets:
     info:
       path: tgwatch Watch App/Info.plist
       properties:
-        CFBundleDisplayName: Nicegram
+        CFBundleDisplayName: Wraithgram
         CFBundleIconName: AppIcon
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         WKApplication: true
-        WKCompanionAppBundleIdentifier: app.nicegram
+        WKCompanionAppBundleIdentifier: app.wraithgram
         # Intentional: keeps the watch app independently installable on the watch
         # while still shipping inside the Telegram IPA. Do not change to false.
         WKRunsIndependentlyOfCompanionApp: true
@@ -68,7 +68,7 @@ targets:
         NSLocationWhenInUseUsageDescription: Share your current location in chats.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.nicegram.watchkitapp
+        PRODUCT_BUNDLE_IDENTIFIER: app.wraithgram.watchkitapp
         # Unused by the embedded build (signing is disabled here; the Bazel step
         # signs with the watchkitapp provisioning profile, which carries the team).
         DEVELOPMENT_TEAM: ""

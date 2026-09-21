@@ -2,7 +2,6 @@ default_platform :ios
 
 require 'base64'
 require 'fileutils'
-require 'googleauth'
 require 'json'
 require 'spaceship'
 
@@ -37,7 +36,7 @@ TELEGRAM_CHAT_ID = ENV["TELEGRAM_CHAT_ID"]
 TELEGRAM_WATCHOS_APP_ID = ENV["TELEGRAM_WATCHOS_APP_ID"]
 TELEGRAM_WATCHOS_APP_HASH = ENV["TELEGRAM_WATCHOS_APP_HASH"]
 
-base_app_identifier_llc = BUNDLE_ID || "app.nicegram"
+base_app_identifier_llc = BUNDLE_ID || "app.wraithgram"
 app_identifier_llc = [
   base_app_identifier_llc,
   base_app_identifier_llc + ".Widget",
@@ -92,7 +91,6 @@ lane :beta_build do |options|
     upload_to_tf: true
   )
 
-  upload_dsyms()
 end
 
 lane :master_build do |options|
@@ -147,8 +145,6 @@ lane :build do |options|
   telegram_configuration_path = resolve_telegram_configuration(
     is_appstore_build: upload_to_tf
   )
-
-  update_remote_config_defaults()
 
   ensure_xcode_symlink()
 
@@ -356,32 +352,6 @@ lane :upload_ipa do |options|
   )
 end
 
-lane :update_remote_config_defaults do |options|
-  credentials_file_path = "./GOOGLE_APPLICATION_CREDENTIALS"
-  File.write(
-    credentials_file_path, 
-    Base64.decode64(GOOGLE_APPLICATION_CREDENTIALS_BASE64)
-  )
-
-  scope = [
-    "https://www.googleapis.com/auth/firebase.remoteconfig"
-  ]
-
-  auth = Google::Auth::ServiceAccountCredentials.make_creds(
-    json_key_io: File.open(credentials_file_path),
-    scope: scope
-  )
-  token = auth.fetch_access_token!["access_token"]
-  
-  sh "curl https://firebaseremoteconfig.googleapis.com/v1/projects/nicegram-55d94/remoteConfig:downloadDefaults?format=PLIST \
-  --compressed \
-  -H \"Authorization: Bearer #{token}\" \
-  -o #{SOURCE_PATH}/Telegram/Telegram-iOS/FirebaseRemoteConfigDefaults.plist \
-  "
-
-  File.delete(credentials_file_path)
-end
-
 lane :nicegram_match do |options|
   type = options[:type]
 
@@ -436,24 +406,6 @@ lane :nicegram_match do |options|
       keychain_password: KEYCHAIN_PASSWORD
     )
   end
-end
-
-lane :upload_dsyms do |options|
-  upload_dsyms_to_crashlytics()
-  upload_dsyms_to_sentry()
-end
-
-lane :upload_dsyms_to_crashlytics do |options|
-  upload_symbols_to_crashlytics(
-    binary_path: "#{SOURCE_PATH}/ci/upload-symbols",
-    dsym_path: "#{BUILD_WORKING_DIR}/artifacts/Telegram.DSYMs.zip",
-    gsp_path: "#{SOURCE_PATH}/Telegram/Telegram-iOS/GoogleService-Info.plist"
-  )
-end
-
-lane :upload_dsyms_to_sentry do |options|
-  dsym_path = "#{BUILD_WORKING_DIR}/artifacts/Telegram.DSYMs.zip"
-  sh("sentry-cli debug-files upload #{dsym_path}")
 end
 
 lane :generate_app_store_connect_api_key do |options|
