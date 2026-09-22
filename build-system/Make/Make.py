@@ -695,6 +695,9 @@ def build(bazel, arguments):
         additional_codesigning_output_path=None
     )
 
+    if arguments.disableProvisioningProfiles:
+        bazel_command_line.set_disable_provisioning_profiles()
+
     bazel_command_line.set_configuration(arguments.configuration)
     if arguments.embedWatchApp:
         if arguments.configuration in ('debug_arm64', 'release_arm64'):
@@ -1114,6 +1117,12 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Respect MODULE.bazel.lock.'
+    )
+    buildParser.add_argument(
+        '--disableProvisioningProfiles',
+        action='store_true',
+        default=False,
+        help='Build a device IPA without provisioning profiles. The result must be signed before installation.'
     )
     buildParser.add_argument(
         '--embedWatchApp',

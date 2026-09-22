@@ -1,4 +1,4 @@
-name: Wraithgram IPA
+name: Wraithgram Unsigned IPA
 
 on:
   push:
@@ -10,29 +10,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: wraithgram-ipa-${{ github.ref }}
+  group: wraithgram-unsigned-ipa-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: macos-26
     env:
-      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.WRAITHGRAM_APP_STORE_CONNECT_API_KEY_ID }}
-      APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.WRAITHGRAM_APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
-      APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT: ${{ secrets.WRAITHGRAM_APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT }}
       BAZEL_LOCAL_CACHE: /Users/runner/work/wraithgram-bazel-cache
       BAZEL_USER_ROOT: /private/var/tmp/_bazel_wraithgram
       BUILD_WORKING_DIR: /Users/wraithgram/build-working-dir
       BUNDLE_ID: app.wraithgram
-      KEYCHAIN_NAME: wraithgram-build
-      KEYCHAIN_PASSWORD: ${{ secrets.WRAITHGRAM_KEYCHAIN_PASSWORD }}
-      MATCH_PASSWORD: ${{ secrets.WRAITHGRAM_CODESIGN_PASSWORD }}
-      SIGN_URL: ${{ secrets.WRAITHGRAM_CODESIGN_REPOSITORY }}
       SOURCE_PATH: /Users/wraithgram/source
-      TEAM_ID: ${{ secrets.WRAITHGRAM_TEAM_ID }}
-      TELEGRAM_CODESIGNING_GIT_PASSWORD: ${{ secrets.WRAITHGRAM_CODESIGN_PASSWORD }}
-      TELEGRAM_CODESIGNING_PRIVATE_KEY: ${{ secrets.WRAITHGRAM_BITBUCKET_SSH_KEY }}
-      TELEGRAM_CONFIGURATION_PROD: ${{ secrets.WRAITHGRAM_TELEGRAM_CONFIGURATION_PROD }}
+      WRAITHGRAM_TELEGRAM_CONFIGURATION_PROD: ${{ secrets.WRAITHGRAM_TELEGRAM_CONFIGURATION_PROD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -50,23 +40,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-wraithgram-bazel-
 
-      - name: Validate private build inputs
+      - name: Validate private source and runtime inputs
         env:
           WRAITHGRAM_BITBUCKET_SSH_KEY: ${{ secrets.WRAITHGRAM_BITBUCKET_SSH_KEY }}
         run: |
           missing=0
           for name in \
             WRAITHGRAM_BITBUCKET_SSH_KEY \
-            APP_STORE_CONNECT_API_KEY_ID \
-            APP_STORE_CONNECT_API_KEY_ISSUER_ID \
-            APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT \
-            KEYCHAIN_PASSWORD \
-            MATCH_PASSWORD \
-            SIGN_URL \
-            TEAM_ID \
-            TELEGRAM_CONFIGURATION_PROD; do
+            WRAITHGRAM_TELEGRAM_CONFIGURATION_PROD; do
             if [ -z "${!name}" ]; then
-              echo "::error title=Missing secret::$name is required for a signed Wraithgram IPA."
+              echo "::error title=Missing secret::$name is required to build a Wraithgram IPA."
               missing=1
             fi
           done
@@ -96,15 +79,19 @@ jobs:
           rm -rf "$SOURCE_PATH"
           cp -R "$GITHUB_WORKSPACE" "$SOURCE_PATH"
 
-      - name: Build signed IPA
+      - name: Build unsigned IPA
         run: |
-          mkdir -p "$BUILD_WORKING_DIR"
-          cd "$SOURCE_PATH/ci"
-          fastlane master_build
+          xcode_path="$(xcode-select -p)"
+          sudo ln -sfn "${xcode_path%/Contents/Developer}" /Applications/Xcode.app
+          chmod +x "$SOURCE_PATH/ci/build-unsigned-ipa.sh" "$SOURCE_PATH/ci/strip-ipa-signatures.sh"
+          "$SOURCE_PATH/ci/build-unsigned-ipa.sh"
+          "$SOURCE_PATH/ci/strip-ipa-signatures.sh" \
+            "$BUILD_WORKING_DIR/artifacts/Telegram.ipa" \
+            "$BUILD_WORKING_DIR/artifacts/Wraithgram-unsigned.ipa"
 
-      - name: Upload IPA
+      - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Wraithgram.ipa
-          path: ${{ env.BUILD_WORKING_DIR }}/artifacts/Telegram.ipa
+          name: Wraithgram-unsigned.ipa
+          path: ${{ env.BUILD_WORKING_DIR }}/artifacts/Wraithgram-unsigned.ipa
           if-no-files-found: error
